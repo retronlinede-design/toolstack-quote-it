@@ -1,4 +1,4 @@
-// Quote-It (ToolStack) — module-ready MVP
+// Quote-It (ToolStack) — module-ready MVP (Styled to match Inspect-It master)
 // Paste into: src/App.jsx
 // Requires: Tailwind v4 configured (same as other ToolStack apps).
 
@@ -15,6 +15,16 @@ const PROFILE_KEY = "toolstack.profile.v1";
 
 // Optional: set later
 const HUB_URL = "https://YOUR-WIX-HUB-URL-HERE";
+
+// ✅ Same style of id helper as Budgit (prevents crypto issues on some builds)
+const uid = (prefix = "id") => {
+  try {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  } catch {
+    // ignore
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
 
 function safeParse(raw, fallback) {
   try {
@@ -41,7 +51,7 @@ function loadProfile() {
 
 function defaultState() {
   const mkVendor = () => ({
-    id: crypto?.randomUUID?.() || String(Date.now() + Math.random()),
+    id: uid("v"),
     name: "",
     email: "",
     phone: "",
@@ -87,13 +97,12 @@ function loadState() {
   return safeParse(localStorage.getItem(KEY), null) || defaultState();
 }
 
+// NOTE: do NOT write to localStorage here (prevents double-save loops)
 function saveState(state) {
-  const next = {
+  return {
     ...state,
     meta: { ...state.meta, updatedAt: new Date().toISOString() },
   };
-  localStorage.setItem(KEY, JSON.stringify(next));
-  return next;
 }
 
 function isEmail(s) {
@@ -170,20 +179,26 @@ function buildRFQBody({ profile, rfq, request, vendor }) {
   return lines.filter((l) => l !== undefined).join("\n");
 }
 
+// Inspect-It master styles (copied exactly)
+const btnSecondary =
+  "px-3 py-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50 active:translate-y-[1px] transition";
+const btnPrimary =
+  "px-3 py-2 rounded-xl bg-neutral-900 text-white border border-neutral-900 shadow-sm hover:bg-neutral-800 active:translate-y-[1px] transition";
+const inputBase =
+  "w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200 bg-white focus:outline-none focus:ring-2 focus:ring-lime-400/25 focus:border-neutral-300";
+
 function StepPill({ label, active, done, onClick }) {
+  // Keep Inspect-It look: inactive = btnSecondary, active = btnPrimary
   return (
     <button
       onClick={onClick}
-      className={
-        "px-3 py-2 rounded-full text-sm border transition " +
-        (active
-          ? "bg-neutral-900 text-white border-neutral-900"
-          : done
-          ? "bg-white border-neutral-200 hover:bg-neutral-50"
-          : "bg-neutral-50 border-neutral-200 hover:bg-white")
-      }
+      className={active ? btnPrimary : btnSecondary}
+      title={done ? "Done" : ""}
     >
-      {label}
+      <span className="inline-flex items-center gap-2">
+        <span>{label}</span>
+        {done ? <span className="text-xs opacity-90">✓</span> : null}
+      </span>
     </button>
   );
 }
@@ -195,32 +210,36 @@ export default function App() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const importRef = useRef(null);
 
-  // Persist profile (shared)
+  // ✅ Debounced profile persist (prevents keystroke thrash)
   useEffect(() => {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    const t = setTimeout(() => {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    }, 300);
+    return () => clearTimeout(t);
   }, [profile]);
 
-  // Persist state
+  // ✅ Debounced state persist (single persist path)
   useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    const t = setTimeout(() => {
+      localStorage.setItem(KEY, JSON.stringify(state));
+    }, 350);
+    return () => clearTimeout(t);
   }, [state]);
 
   const step = state.ui.step;
 
   const steps = useMemo(
     () => [
-      { key: "request", label: "Request" },
-      { key: "vendors", label: "Vendors" },
-      { key: "rfq", label: "RFQs" },
-      { key: "quotes", label: "Quotes" },
-      { key: "pack", label: "Pack" },
+      { key: "request", label: "1. Request" },
+      { key: "vendors", label: "2. Vendors" },
+      { key: "rfq", label: "3. RFQs" },
+      { key: "quotes", label: "4. Quotes" },
+      { key: "pack", label: "5. Pack" },
     ],
     []
   );
 
-  // Derived helpers
   const vendors = state.vendors || [];
-
   const vendorCount = vendors.filter((v) => String(v.name || "").trim()).length;
   const emailCount = vendors.filter((v) => isEmail(v.email)).length;
 
@@ -257,15 +276,19 @@ export default function App() {
     const r = state.request;
     const requestOk = !!String(r.title || "").trim() && !!String(r.spec || "").trim();
     const vendorsOk = vendorCount >= 3;
-    const rfqOk = vendorsOk && emailCount >= 1; // minimum
+    const rfqOk = vendorsOk && emailCount >= 1;
     const quotesOk = quoteRows.filter((x) => x.amount !== null).length >= 3;
     const packOk = quotesOk && !!state.compliance.selectedVendorId;
     return { requestOk, vendorsOk, rfqOk, quotesOk, packOk };
   }, [state.request, vendorCount, emailCount, quoteRows, state.compliance.selectedVendorId]);
 
-  // Actions
   function setStep(n) {
-    setState((prev) => saveState({ ...prev, ui: { ...prev.ui, step: Math.max(0, Math.min(steps.length - 1, n)) } }));
+    setState((prev) =>
+      saveState({
+        ...prev,
+        ui: { ...prev.ui, step: Math.max(0, Math.min(steps.length - 1, n)) },
+      })
+    );
   }
 
   function updateRequest(patch) {
@@ -277,14 +300,7 @@ export default function App() {
   }
 
   function addVendor() {
-    const v = {
-      id: crypto?.randomUUID?.() || String(Date.now() + Math.random()),
-      name: "",
-      email: "",
-      phone: "",
-      website: "",
-      notes: "",
-    };
+    const v = { id: uid("v"), name: "", email: "", phone: "", website: "", notes: "" };
     setState((prev) => saveState({ ...prev, vendors: [...prev.vendors, v] }));
   }
 
@@ -333,7 +349,9 @@ export default function App() {
   }
 
   function selectVendor(vendorId) {
-    setState((prev) => saveState({ ...prev, compliance: { ...prev.compliance, selectedVendorId: vendorId } }));
+    setState((prev) =>
+      saveState({ ...prev, compliance: { ...prev.compliance, selectedVendorId: vendorId } })
+    );
   }
 
   async function copyText(text) {
@@ -346,11 +364,7 @@ export default function App() {
   }
 
   function exportJSON() {
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      profile,
-      data: state,
-    };
+    const payload = { exportedAt: new Date().toISOString(), profile, data: state };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -392,7 +406,6 @@ export default function App() {
     []
   );
 
-  // RFQ builder for preview/actions
   const rfqTextByVendor = useMemo(() => {
     const out = new Map();
     for (const v of vendors) {
@@ -404,41 +417,41 @@ export default function App() {
     return out;
   }, [vendors, state.rfq, state.request, profile]);
 
-  // UI
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900">
+      {/* Print only preview when open */}
+      {previewOpen ? (
+        <style>{`
+          @media print {
+            body * { visibility: hidden !important; }
+            #quoteit-print-preview, #quoteit-print-preview * { visibility: visible !important; }
+            #quoteit-print-preview { position: absolute !important; left: 0; top: 0; width: 100%; }
+          }
+        `}</style>
+      ) : null}
+
       <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        {/* Header (match Inspect-It) */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-2xl font-bold">Quote-It</div>
+            <div className="text-2xl font-bold tracking-tight">Quote-It</div>
             <div className="text-sm text-neutral-600">
-              Module-ready ({moduleManifest.id}.{moduleManifest.version}) • Offline-first • Mailto RFQs • 3-Quotes Pack
+              Module-ready ({moduleManifest.id}.{moduleManifest.version}) • Mailto RFQs • 3-Quotes Pack • Print/export
             </div>
+            <div className="mt-3 h-[2px] w-80 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
           </div>
 
           <div className="flex flex-wrap gap-2 justify-end">
-            <button
-              className="px-3 py-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50"
-              onClick={() => setPreviewOpen(true)}
-            >
+            <button className={btnSecondary} onClick={() => setPreviewOpen(true)}>
               Preview
             </button>
-            <button
-              className="px-3 py-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50"
-              onClick={printPreview}
-            >
+            <button className={btnSecondary} onClick={printPreview}>
               Print / Save PDF
             </button>
-            <button
-              className="px-3 py-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50"
-              onClick={exportJSON}
-            >
+            <button className={btnSecondary} onClick={exportJSON}>
               Export
             </button>
-            <button
-              className="px-3 py-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50"
-              onClick={() => importRef.current?.click()}
-            >
+            <button className={btnPrimary} onClick={() => importRef.current?.click()}>
               Import
             </button>
             <input
@@ -455,7 +468,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Step pills */}
+        {/* Step pills (same button styles) */}
         <div className="mt-4 flex flex-wrap gap-2">
           <StepPill label="1. Request" active={step === 0} done={stepDone.requestOk} onClick={() => setStep(0)} />
           <StepPill label="2. Vendors" active={step === 1} done={stepDone.vendorsOk} onClick={() => setStep(1)} />
@@ -464,15 +477,16 @@ export default function App() {
           <StepPill label="5. Pack" active={step === 4} done={stepDone.packOk} onClick={() => setStep(4)} />
         </div>
 
+        {/* Main grid (match Inspect-It) */}
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Profile */}
+          {/* Profile card */}
           <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm p-4">
             <div className="font-semibold">Profile (shared)</div>
             <div className="mt-3 space-y-2">
               <label className="block text-sm">
                 <div className="text-neutral-600">Organization</div>
                 <input
-                  className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                  className={inputBase}
                   value={profile.org}
                   onChange={(e) => setProfile({ ...profile, org: e.target.value })}
                 />
@@ -480,7 +494,7 @@ export default function App() {
               <label className="block text-sm">
                 <div className="text-neutral-600">User</div>
                 <input
-                  className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                  className={inputBase}
                   value={profile.user}
                   onChange={(e) => setProfile({ ...profile, user: e.target.value })}
                 />
@@ -488,7 +502,7 @@ export default function App() {
               <label className="block text-sm">
                 <div className="text-neutral-600">Language</div>
                 <select
-                  className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200 bg-white"
+                  className={inputBase}
                   value={profile.language}
                   onChange={(e) => setProfile({ ...profile, language: e.target.value })}
                 >
@@ -502,28 +516,41 @@ export default function App() {
             </div>
           </div>
 
-          {/* Main step panel */}
+          {/* Main step card */}
           <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm p-4 lg:col-span-3">
+            {/* Step header row (same pattern as Inspect-It “New inspection”) */}
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="font-semibold">{steps[step]?.label || "Quote-It"}</div>
+                <div className="text-sm text-neutral-600">
+                  Vendors named: {vendorCount} • Valid emails: {emailCount} • Quotes with amounts:{" "}
+                  {quoteRows.filter((x) => x.amount !== null).length}
+                </div>
+              </div>
+
+              {/* Step actions */}
+              <div className="flex flex-wrap gap-2">
+                {step > 0 && (
+                  <button className={btnSecondary} onClick={() => setStep(step - 1)}>
+                    ← Back
+                  </button>
+                )}
+                {step < steps.length - 1 && (
+                  <button className={btnPrimary} onClick={() => setStep(step + 1)}>
+                    Next →
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Step content */}
             {step === 0 && (
               <div>
-                <div className="flex items-end justify-between gap-3 flex-wrap">
-                  <div>
-                    <div className="font-semibold">Request</div>
-                    <div className="text-sm text-neutral-600">Fill title + specification (minimum for a valid RFQ).</div>
-                  </div>
-                  <button
-                    className="px-3 py-2 rounded-xl bg-neutral-900 text-white hover:bg-neutral-800"
-                    onClick={() => setStep(1)}
-                  >
-                    Next → Vendors
-                  </button>
-                </div>
-
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                   <label className="text-sm">
                     <div className="text-neutral-600">Title *</div>
                     <input
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.request.title}
                       onChange={(e) => updateRequest({ title: e.target.value })}
                     />
@@ -531,7 +558,7 @@ export default function App() {
                   <label className="text-sm">
                     <div className="text-neutral-600">Category</div>
                     <input
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.request.category}
                       onChange={(e) => updateRequest({ category: e.target.value })}
                       placeholder="e.g., Vehicle service, IT, Office supplies"
@@ -540,7 +567,7 @@ export default function App() {
                   <label className="text-sm">
                     <div className="text-neutral-600">Reference</div>
                     <input
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.request.reference}
                       onChange={(e) => updateRequest({ reference: e.target.value })}
                       placeholder="e.g., PR-2025-001"
@@ -550,7 +577,7 @@ export default function App() {
                     <div className="text-neutral-600">Needed by</div>
                     <input
                       type="date"
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.request.neededBy}
                       onChange={(e) => updateRequest({ neededBy: e.target.value })}
                     />
@@ -558,7 +585,7 @@ export default function App() {
                   <label className="text-sm md:col-span-2">
                     <div className="text-neutral-600">Delivery to</div>
                     <input
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.request.deliveryTo}
                       onChange={(e) => updateRequest({ deliveryTo: e.target.value })}
                       placeholder="Address / office / pickup"
@@ -569,7 +596,7 @@ export default function App() {
                 <label className="block text-sm mt-3">
                   <div className="text-neutral-600">Specification / items *</div>
                   <textarea
-                    className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200 min-h-[120px]"
+                    className={`${inputBase} min-h-[120px]`}
                     value={state.request.spec}
                     onChange={(e) => updateRequest({ spec: e.target.value })}
                     placeholder="Describe the exact items/services needed. Include quantities, model numbers, scope, etc."
@@ -579,7 +606,7 @@ export default function App() {
                 <label className="block text-sm mt-3">
                   <div className="text-neutral-600">Notes</div>
                   <textarea
-                    className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200 min-h-[80px]"
+                    className={`${inputBase} min-h-[90px]`}
                     value={state.request.notes}
                     onChange={(e) => updateRequest({ notes: e.target.value })}
                     placeholder="Any constraints, preferred brands, budget notes, etc."
@@ -590,40 +617,23 @@ export default function App() {
 
             {step === 1 && (
               <div>
-                <div className="flex items-end justify-between gap-3 flex-wrap">
-                  <div>
-                    <div className="font-semibold">Vendors</div>
-                    <div className="text-sm text-neutral-600">Add at least 3 vendors for compliance.</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-3 py-2 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
-                      onClick={addVendor}
-                    >
-                      + Vendor
-                    </button>
-                    <button
-                      className="px-3 py-2 rounded-xl bg-neutral-900 text-white hover:bg-neutral-800"
-                      onClick={() => setStep(2)}
-                    >
-                      Next → RFQs
-                    </button>
-                  </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <button className={btnSecondary} onClick={addVendor}>
+                    + Vendor
+                  </button>
+                  <div className="text-sm text-neutral-600">Add at least 3 vendors for compliance.</div>
                 </div>
 
-                <div className="mt-3 text-sm text-neutral-700">
-                  Vendors named: <span className="font-semibold">{vendorCount}</span> • Valid emails: <span className="font-semibold">{emailCount}</span>
-                </div>
-
-                <div className="mt-3 space-y-3">
+                <div className="mt-4 space-y-3">
                   {vendors.map((v, idx) => (
-                    <div key={v.id} className="rounded-2xl border border-neutral-200 p-3">
+                    <div key={v.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
                       <div className="flex items-center justify-between gap-2">
                         <div className="font-semibold">Vendor {idx + 1}</div>
                         <button
                           className="px-3 py-1.5 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
                           onClick={() => deleteVendor(v.id)}
                           disabled={vendors.length <= 1}
+                          title={vendors.length <= 1 ? "Keep at least one vendor" : "Delete vendor"}
                         >
                           Delete
                         </button>
@@ -633,7 +643,7 @@ export default function App() {
                         <label className="text-sm">
                           <div className="text-neutral-600">Name *</div>
                           <input
-                            className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                            className={inputBase}
                             value={v.name}
                             onChange={(e) => updateVendor(v.id, { name: e.target.value })}
                           />
@@ -641,7 +651,7 @@ export default function App() {
                         <label className="text-sm">
                           <div className="text-neutral-600">Email</div>
                           <input
-                            className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                            className={inputBase}
                             value={v.email}
                             onChange={(e) => updateVendor(v.id, { email: e.target.value })}
                             placeholder="quotes@vendor.com"
@@ -650,7 +660,7 @@ export default function App() {
                         <label className="text-sm">
                           <div className="text-neutral-600">Phone</div>
                           <input
-                            className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                            className={inputBase}
                             value={v.phone}
                             onChange={(e) => updateVendor(v.id, { phone: e.target.value })}
                           />
@@ -658,9 +668,10 @@ export default function App() {
                         <label className="text-sm">
                           <div className="text-neutral-600">Website</div>
                           <input
-                            className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                            className={inputBase}
                             value={v.website}
                             onChange={(e) => updateVendor(v.id, { website: e.target.value })}
+                            placeholder="https://"
                           />
                         </label>
                       </div>
@@ -668,7 +679,7 @@ export default function App() {
                       <label className="block text-sm mt-2">
                         <div className="text-neutral-600">Notes</div>
                         <input
-                          className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                          className={inputBase}
                           value={v.notes}
                           onChange={(e) => updateVendor(v.id, { notes: e.target.value })}
                           placeholder="e.g., preferred / fast / local"
@@ -682,24 +693,11 @@ export default function App() {
 
             {step === 2 && (
               <div>
-                <div className="flex items-end justify-between gap-3 flex-wrap">
-                  <div>
-                    <div className="font-semibold">RFQs</div>
-                    <div className="text-sm text-neutral-600">Generate a standardized RFQ for each vendor.</div>
-                  </div>
-                  <button
-                    className="px-3 py-2 rounded-xl bg-neutral-900 text-white hover:bg-neutral-800"
-                    onClick={() => setStep(3)}
-                  >
-                    Next → Quotes
-                  </button>
-                </div>
-
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                   <label className="text-sm">
                     <div className="text-neutral-600">Subject prefix</div>
                     <input
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.rfq.subjectPrefix}
                       onChange={(e) => updateRFQ({ subjectPrefix: e.target.value })}
                     />
@@ -707,25 +705,23 @@ export default function App() {
                   <label className="text-sm">
                     <div className="text-neutral-600">Greeting</div>
                     <input
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.rfq.greeting}
                       onChange={(e) => updateRFQ({ greeting: e.target.value })}
-                      placeholder="Dear"
                     />
                   </label>
                   <label className="text-sm">
                     <div className="text-neutral-600">Closing</div>
                     <input
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.rfq.closing}
                       onChange={(e) => updateRFQ({ closing: e.target.value })}
-                      placeholder="Kind regards"
                     />
                   </label>
                   <label className="text-sm">
                     <div className="text-neutral-600">Signature name (optional)</div>
                     <input
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.rfq.signatureName}
                       onChange={(e) => updateRFQ({ signatureName: e.target.value })}
                       placeholder="If profile user is blank"
@@ -735,7 +731,7 @@ export default function App() {
                   <label className="text-sm md:col-span-2">
                     <div className="text-neutral-600">Payment line</div>
                     <input
-                      className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                      className={inputBase}
                       value={state.rfq.paymentLine}
                       onChange={(e) => updateRFQ({ paymentLine: e.target.value })}
                     />
@@ -749,7 +745,10 @@ export default function App() {
                     ["delivery", "Delivery"],
                     ["payment", "Payment terms"],
                   ].map(([k, label]) => (
-                    <label key={k} className="flex items-center gap-2 bg-white border border-neutral-200 rounded-full px-3 py-2">
+                    <label
+                      key={k}
+                      className="flex items-center gap-2 bg-white border border-neutral-200 rounded-full px-3 py-2"
+                    >
                       <input
                         type="checkbox"
                         checked={!!state.rfq.include?.[k]}
@@ -772,32 +771,21 @@ export default function App() {
                       const canMail = isEmail(v.email);
 
                       return (
-                        <div key={v.id} className="rounded-2xl border border-neutral-200 p-3">
+                        <div key={v.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
                           <div className="flex items-start justify-between gap-3 flex-wrap">
                             <div>
                               <div className="font-semibold">{v.name}</div>
                               <div className="text-sm text-neutral-600">{v.email || "No email"}</div>
                             </div>
-                            <div className="flex gap-2">
-                              <button
-                                className="px-3 py-2 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
-                                onClick={() => copyText(subject)}
-                              >
+                            <div className="flex gap-2 flex-wrap">
+                              <button className={btnSecondary} onClick={() => copyText(subject)}>
                                 Copy subject
                               </button>
-                              <button
-                                className="px-3 py-2 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
-                                onClick={() => copyText(body)}
-                              >
+                              <button className={btnSecondary} onClick={() => copyText(body)}>
                                 Copy body
                               </button>
                               <a
-                                className={
-                                  "px-3 py-2 rounded-xl border shadow-sm " +
-                                  (canMail
-                                    ? "bg-neutral-900 text-white border-neutral-900 hover:bg-neutral-800"
-                                    : "bg-neutral-100 text-neutral-400 border-neutral-200 pointer-events-none")
-                                }
+                                className={canMail ? btnPrimary : `${btnSecondary} pointer-events-none opacity-60`}
                                 href={canMail ? buildMailto(v.email, subject, body) : undefined}
                               >
                                 Email (mailto)
@@ -806,11 +794,11 @@ export default function App() {
                           </div>
 
                           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-2">
+                            <div className="rounded-xl bg-white border border-neutral-200 p-2">
                               <div className="text-xs text-neutral-600">Subject</div>
                               <div className="text-sm break-words">{subject || "-"}</div>
                             </div>
-                            <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-2">
+                            <div className="rounded-xl bg-white border border-neutral-200 p-2">
                               <div className="text-xs text-neutral-600">Body (preview)</div>
                               <pre className="text-xs whitespace-pre-wrap break-words">{body || "-"}</pre>
                             </div>
@@ -824,26 +812,13 @@ export default function App() {
 
             {step === 3 && (
               <div>
-                <div className="flex items-end justify-between gap-3 flex-wrap">
-                  <div>
-                    <div className="font-semibold">Quotes</div>
-                    <div className="text-sm text-neutral-600">Record totals + lead time + validity. Aim for 3 quotes.</div>
-                  </div>
-                  <button
-                    className="px-3 py-2 rounded-xl bg-neutral-900 text-white hover:bg-neutral-800"
-                    onClick={() => setStep(4)}
-                  >
-                    Next → Pack
-                  </button>
-                </div>
-
-                <div className="mt-3 space-y-3">
+                <div className="mt-4 space-y-3">
                   {vendors
                     .filter((v) => String(v.name || "").trim())
                     .map((v) => {
                       const q = quotesByVendor.get(v.id) || {};
                       return (
-                        <div key={v.id} className="rounded-2xl border border-neutral-200 p-3">
+                        <div key={v.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
                           <div className="flex items-start justify-between gap-3 flex-wrap">
                             <div>
                               <div className="font-semibold">{v.name}</div>
@@ -860,7 +835,7 @@ export default function App() {
                               <input
                                 type="number"
                                 step="0.01"
-                                className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                                className={inputBase}
                                 value={q.amount ?? ""}
                                 onChange={(e) => upsertQuote(v.id, { amount: e.target.value })}
                                 placeholder="e.g., 199.99"
@@ -869,7 +844,7 @@ export default function App() {
                             <label className="text-sm">
                               <div className="text-neutral-600">Lead time</div>
                               <input
-                                className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                                className={inputBase}
                                 value={q.leadTime ?? ""}
                                 onChange={(e) => upsertQuote(v.id, { leadTime: e.target.value })}
                                 placeholder="e.g., 3-5 business days"
@@ -878,7 +853,7 @@ export default function App() {
                             <label className="text-sm">
                               <div className="text-neutral-600">Validity</div>
                               <input
-                                className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                                className={inputBase}
                                 value={q.validity ?? ""}
                                 onChange={(e) => upsertQuote(v.id, { validity: e.target.value })}
                                 placeholder="e.g., valid 14 days"
@@ -887,7 +862,7 @@ export default function App() {
                             <label className="text-sm">
                               <div className="text-neutral-600">Proof reference</div>
                               <input
-                                className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                                className={inputBase}
                                 value={q.proof ?? ""}
                                 onChange={(e) => upsertQuote(v.id, { proof: e.target.value })}
                                 placeholder="e.g., email 24.12 / PDF filename"
@@ -898,7 +873,7 @@ export default function App() {
                           <label className="block text-sm mt-2">
                             <div className="text-neutral-600">Notes</div>
                             <input
-                              className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200"
+                              className={inputBase}
                               value={q.notes ?? ""}
                               onChange={(e) => upsertQuote(v.id, { notes: e.target.value })}
                               placeholder="Any special terms / observations"
@@ -958,31 +933,20 @@ export default function App() {
 
             {step === 4 && (
               <div>
-                <div className="flex items-end justify-between gap-3 flex-wrap">
-                  <div>
-                    <div className="font-semibold">Three Quotes Pack</div>
-                    <div className="text-sm text-neutral-600">Finalize selection + justification, then export/print.</div>
-                  </div>
-                  <button
-                    className="px-3 py-2 rounded-xl bg-neutral-900 text-white hover:bg-neutral-800"
-                    onClick={() => setPreviewOpen(true)}
-                  >
-                    Open preview
-                  </button>
-                </div>
-
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div className="rounded-2xl border border-neutral-200 p-3">
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
                     <div className="font-semibold">Selected vendor</div>
                     <div className="mt-2 text-sm">
                       {state.compliance.selectedVendorId
                         ? vendors.find((v) => v.id === state.compliance.selectedVendorId)?.name || "-"
                         : "Not selected"}
                     </div>
-                    <div className="mt-3 text-sm text-neutral-600">Tip: select vendor in the Quotes table.</div>
+                    <div className="mt-3 text-sm text-neutral-600">
+                      Tip: select vendor in the Quotes comparison table.
+                    </div>
                   </div>
 
-                  <div className="rounded-2xl border border-neutral-200 p-3">
+                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
                     <div className="font-semibold">Compliance checklist</div>
                     <ul className="mt-2 text-sm text-neutral-700 list-disc pl-5">
                       <li>Request documented (title + specification)</li>
@@ -996,33 +960,26 @@ export default function App() {
                 <label className="block text-sm mt-3">
                   <div className="text-neutral-600">Justification (why selected vendor)</div>
                   <textarea
-                    className="w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200 min-h-[120px]"
+                    className={`${inputBase} min-h-[120px]`}
                     value={state.compliance.justification}
                     onChange={(e) =>
-                      setState((prev) => saveState({ ...prev, compliance: { ...prev.compliance, justification: e.target.value } }))
+                      setState((prev) =>
+                        saveState({
+                          ...prev,
+                          compliance: { ...prev.compliance, justification: e.target.value },
+                        })
+                      )
                     }
                     placeholder="e.g., lowest total cost, fastest delivery, compliant spec, best warranty..."
                   />
                 </label>
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    className="px-3 py-2 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
-                    onClick={() => setStep(3)}
-                  >
-                    ← Back to quotes
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <button className={btnSecondary} onClick={() => setStep(3)}>
+                    Back to quotes
                   </button>
-                  <button
-                    className="px-3 py-2 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
-                    onClick={() => setPreviewOpen(true)}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    className="px-3 py-2 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
-                    onClick={printPreview}
-                  >
-                    Print / Save PDF
+                  <button className={btnPrimary} onClick={() => setPreviewOpen(true)}>
+                    Open preview
                   </button>
                 </div>
               </div>
@@ -1030,158 +987,178 @@ export default function App() {
           </div>
         </div>
 
-        {/* Preview modal */}
+        {/* Preview modal (match Inspect-It) */}
         {previewOpen && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-3 z-50">
             <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-neutral-200 overflow-hidden">
               <div className="p-3 border-b flex items-center justify-between">
                 <div className="font-semibold">Preview — Three Quotes Pack</div>
                 <div className="flex gap-2">
-                  <button
-                    className="px-3 py-2 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
-                    onClick={printPreview}
-                  >
+                  <button className={btnSecondary} onClick={printPreview}>
                     Print / Save PDF
                   </button>
-                  <button
-                    className="px-3 py-2 rounded-xl bg-neutral-900 text-white hover:bg-neutral-800"
-                    onClick={() => setPreviewOpen(false)}
-                  >
+                  <button className={btnPrimary} onClick={() => setPreviewOpen(false)}>
                     Close
                   </button>
                 </div>
               </div>
 
               <div className="p-6 overflow-auto max-h-[80vh]">
-                <div className="text-xl font-bold">{profile.org || "ToolStack"}</div>
-                <div className="text-sm text-neutral-600">Three Quotes Pack</div>
-
-                <div className="mt-2 text-sm">
-                  <div>
-                    <span className="text-neutral-600">Prepared by:</span> {profile.user || state.rfq.signatureName || "-"}
-                  </div>
-                  <div>
-                    <span className="text-neutral-600">Date:</span> {isoToday()}
-                  </div>
-                  <div>
-                    <span className="text-neutral-600">Reference:</span> {state.request.reference || "-"}
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-neutral-200 p-3">
-                  <div className="font-semibold">Request summary</div>
-                  <div className="mt-2 text-sm">
-                    <div><span className="text-neutral-600">Title:</span> {state.request.title || "-"}</div>
-                    <div><span className="text-neutral-600">Category:</span> {state.request.category || "-"}</div>
-                    <div><span className="text-neutral-600">Needed by:</span> {state.request.neededBy || "-"}</div>
-                    <div><span className="text-neutral-600">Delivery to:</span> {state.request.deliveryTo || "-"}</div>
-                  </div>
+                <div id="quoteit-print-preview">
+                  <div className="text-xl font-bold">{profile.org || "ToolStack"}</div>
+                  <div className="text-sm text-neutral-600">Three Quotes Pack</div>
+                  <div className="mt-2 h-[2px] w-72 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
 
                   <div className="mt-3 text-sm">
-                    <div className="font-semibold">Specification / items</div>
-                    <pre className="mt-1 whitespace-pre-wrap break-words text-sm">{state.request.spec || "-"}</pre>
-                  </div>
-
-                  {state.request.notes && (
-                    <div className="mt-3 text-sm">
-                      <div className="font-semibold">Notes</div>
-                      <pre className="mt-1 whitespace-pre-wrap break-words text-sm">{state.request.notes}</pre>
+                    <div>
+                      <span className="text-neutral-600">Prepared by:</span>{" "}
+                      {profile.user || state.rfq.signatureName || "-"}
                     </div>
-                  )}
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-neutral-200 p-3">
-                  <div className="font-semibold">Vendors contacted</div>
-                  <div className="mt-2 overflow-auto">
-                    <table className="w-full text-sm">
-                      <thead className="text-left text-neutral-600">
-                        <tr className="border-b">
-                          <th className="py-2 pr-2">Vendor</th>
-                          <th className="py-2 pr-2">Email</th>
-                          <th className="py-2 pr-2">Phone</th>
-                          <th className="py-2 pr-2">Website</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {vendors
-                          .filter((v) => String(v.name || "").trim())
-                          .map((v) => (
-                            <tr key={v.id} className="border-b last:border-b-0">
-                              <td className="py-2 pr-2 font-medium">{v.name}</td>
-                              <td className="py-2 pr-2">{v.email || "-"}</td>
-                              <td className="py-2 pr-2">{v.phone || "-"}</td>
-                              <td className="py-2 pr-2">{v.website || "-"}</td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
+                    <div>
+                      <span className="text-neutral-600">Date:</span> {isoToday()}
+                    </div>
+                    <div>
+                      <span className="text-neutral-600">Reference:</span>{" "}
+                      {state.request.reference || "-"}
+                    </div>
+                    <div>
+                      <span className="text-neutral-600">Generated:</span>{" "}
+                      {new Date().toLocaleString()}
+                    </div>
                   </div>
-                </div>
 
-                <div className="mt-4 rounded-2xl border border-neutral-200 p-3">
-                  <div className="font-semibold">Quotes comparison</div>
-                  <div className="mt-2 overflow-auto">
-                    <table className="w-full text-sm">
-                      <thead className="text-left text-neutral-600">
-                        <tr className="border-b">
-                          <th className="py-2 pr-2">Selected</th>
-                          <th className="py-2 pr-2">Vendor</th>
-                          <th className="py-2 pr-2">Amount</th>
-                          <th className="py-2 pr-2">Lead time</th>
-                          <th className="py-2 pr-2">Validity</th>
-                          <th className="py-2 pr-2">Proof</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {quoteRows.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="py-3 text-neutral-500">
-                              No quote rows.
-                            </td>
+                  <div className="mt-4 rounded-2xl border border-neutral-200 p-3 text-sm">
+                    <div className="font-semibold">Request summary</div>
+                    <div className="mt-1 text-neutral-700">
+                      <div>
+                        <span className="text-neutral-600">Title:</span>{" "}
+                        {state.request.title || "-"}
+                      </div>
+                      <div>
+                        <span className="text-neutral-600">Category:</span>{" "}
+                        {state.request.category || "-"}
+                      </div>
+                      <div>
+                        <span className="text-neutral-600">Needed by:</span>{" "}
+                        {state.request.neededBy || "-"}
+                      </div>
+                      <div>
+                        <span className="text-neutral-600">Delivery to:</span>{" "}
+                        {state.request.deliveryTo || "-"}
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="font-semibold">Specification / items</div>
+                      <div className="text-neutral-700 whitespace-pre-wrap">
+                        {state.request.spec || "-"}
+                      </div>
+                    </div>
+
+                    {state.request.notes ? (
+                      <div className="mt-3">
+                        <div className="font-semibold">Notes</div>
+                        <div className="text-neutral-700 whitespace-pre-wrap">{state.request.notes}</div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-neutral-200 p-3 text-sm">
+                    <div className="font-semibold">Vendors contacted</div>
+                    <div className="mt-2 overflow-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-neutral-600">
+                          <tr className="border-b">
+                            <th className="py-2 pr-2">Vendor</th>
+                            <th className="py-2 pr-2">Email</th>
+                            <th className="py-2 pr-2">Phone</th>
+                            <th className="py-2 pr-2">Website</th>
                           </tr>
-                        ) : (
-                          quoteRows.map((r) => (
-                            <tr key={r.vendorId} className="border-b last:border-b-0">
-                              <td className="py-2 pr-2">
-                                {state.compliance.selectedVendorId === r.vendorId ? "✓" : ""}
+                        </thead>
+                        <tbody>
+                          {vendors
+                            .filter((v) => String(v.name || "").trim())
+                            .map((v) => (
+                              <tr key={v.id} className="border-b last:border-b-0">
+                                <td className="py-2 pr-2 font-medium">{v.name}</td>
+                                <td className="py-2 pr-2">{v.email || "-"}</td>
+                                <td className="py-2 pr-2">{v.phone || "-"}</td>
+                                <td className="py-2 pr-2">{v.website || "-"}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-neutral-200 p-3 text-sm">
+                    <div className="font-semibold">Quotes comparison</div>
+                    <div className="mt-2 overflow-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-neutral-600">
+                          <tr className="border-b">
+                            <th className="py-2 pr-2">Selected</th>
+                            <th className="py-2 pr-2">Vendor</th>
+                            <th className="py-2 pr-2">Amount</th>
+                            <th className="py-2 pr-2">Lead time</th>
+                            <th className="py-2 pr-2">Validity</th>
+                            <th className="py-2 pr-2">Proof</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {quoteRows.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="py-3 text-neutral-500">
+                                No quote rows.
                               </td>
-                              <td className="py-2 pr-2 font-medium">{r.vendorName}</td>
-                              <td className="py-2 pr-2">{r.amount === null ? "-" : moneyFmt(r.amount)}</td>
-                              <td className="py-2 pr-2">{r.leadTime || "-"}</td>
-                              <td className="py-2 pr-2">{r.validity || "-"}</td>
-                              <td className="py-2 pr-2">{r.proof || "-"}</td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                          ) : (
+                            quoteRows.map((r) => (
+                              <tr key={r.vendorId} className="border-b last:border-b-0">
+                                <td className="py-2 pr-2">
+                                  {state.compliance.selectedVendorId === r.vendorId ? "✓" : ""}
+                                </td>
+                                <td className="py-2 pr-2 font-medium">{r.vendorName}</td>
+                                <td className="py-2 pr-2">{r.amount === null ? "-" : moneyFmt(r.amount)}</td>
+                                <td className="py-2 pr-2">{r.leadTime || "-"}</td>
+                                <td className="py-2 pr-2">{r.validity || "-"}</td>
+                                <td className="py-2 pr-2">{r.proof || "-"}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
 
-                <div className="mt-4 rounded-2xl border border-neutral-200 p-3">
-                  <div className="font-semibold">Justification</div>
-                  <div className="mt-2 text-sm whitespace-pre-wrap break-words">{state.compliance.justification || "-"}</div>
-                </div>
-
-                <div className="mt-6 grid grid-cols-2 gap-6 text-sm">
-                  <div>
-                    <div className="text-neutral-600">Prepared by</div>
-                    <div className="mt-8 border-t pt-2">Signature</div>
+                  <div className="mt-4 rounded-2xl border border-neutral-200 p-3 text-sm">
+                    <div className="font-semibold">Justification</div>
+                    <div className="text-neutral-700 whitespace-pre-wrap">
+                      {state.compliance.justification || "-"}
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-neutral-600">Approved by</div>
-                    <div className="mt-8 border-t pt-2">Signature</div>
-                  </div>
-                </div>
 
-                <div className="mt-6 text-xs text-neutral-500">
-                  Storage key: <span className="font-mono">{KEY}</span>
+                  <div className="mt-6 grid grid-cols-2 gap-6 text-sm">
+                    <div>
+                      <div className="text-neutral-600">Prepared by</div>
+                      <div className="mt-8 border-t pt-2">Signature</div>
+                    </div>
+                    <div>
+                      <div className="text-neutral-600">Approved by</div>
+                      <div className="mt-8 border-t pt-2">Signature</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 text-xs text-neutral-500">
+                    Storage key: <span className="font-mono">{KEY}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* Footer link (match Inspect-It) */}
         <div className="mt-6 text-sm text-neutral-600">
           <a className="underline hover:text-neutral-900" href={HUB_URL} target="_blank" rel="noreferrer">
             Return to ToolStack hub
