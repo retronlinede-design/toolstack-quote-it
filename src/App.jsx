@@ -293,6 +293,7 @@ export default function App() {
   const [state, setState] = useState(loadState());
 
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const importRef = useRef(null);
 
   // Vendor Finder + Library state
@@ -677,7 +678,7 @@ export default function App() {
 
       <div className="max-w-6xl mx-auto p-4 sm:p-6">
         {/* Header (match Inspect-It) */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <div className="text-2xl font-bold tracking-tight">Quote-It</div>
             <div className="text-sm text-neutral-600">
@@ -686,19 +687,32 @@ export default function App() {
             <div className="mt-3 h-[2px] w-80 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-end">
-            <button className={btnSecondary} onClick={() => setPreviewOpen(true)}>
-              Preview
+          {/* ✅ ToolStack standard: normalized Top Actions grid + pinned ? Help */}
+          <div className="w-full sm:w-auto flex items-center justify-end gap-2">
+            <div className="grid grid-cols-4 gap-2 w-full sm:w-auto">
+              <button className={btnSecondary} onClick={() => setPreviewOpen(true)}>
+                Preview
+              </button>
+              <button className={btnSecondary} onClick={printPreview}>
+                Print / Save PDF
+              </button>
+              <button className={btnSecondary} onClick={exportJSON}>
+                Export
+              </button>
+              <button className={btnSecondary} onClick={() => importRef.current?.click()}>
+                Import
+              </button>
+            </div>
+
+            <button
+              className={`${btnSecondary} w-10 h-10 flex items-center justify-center`}
+              onClick={() => setHelpOpen(true)}
+              title="Help"
+              aria-label="Help"
+            >
+              ?
             </button>
-            <button className={btnSecondary} onClick={printPreview}>
-              Print / Save PDF
-            </button>
-            <button className={btnSecondary} onClick={exportJSON}>
-              Export
-            </button>
-            <button className={btnPrimary} onClick={() => importRef.current?.click()}>
-              Import
-            </button>
+
             <input
               ref={importRef}
               type="file"
@@ -766,7 +780,7 @@ export default function App() {
 
           {/* Main step card */}
           <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm p-4 lg:col-span-3">
-            {/* Step header row (same pattern as Inspect-It “New inspection”) */}
+            {/* Step header row */}
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <div className="font-semibold">{steps[step]?.label || "Quote-It"}</div>
@@ -876,7 +890,11 @@ export default function App() {
                           One-click searches → quick add → (optional) save to your library.
                         </div>
                       </div>
-                      <button className={btnSecondary} onClick={autoPick3VendorsFromLibrary} title="Pick 3 best matches from your saved library">
+                      <button
+                        className={btnSecondary}
+                        onClick={autoPick3VendorsFromLibrary}
+                        title="Pick 3 best matches from your saved library"
+                      >
                         Auto-pick 3 (from library)
                       </button>
                     </div>
@@ -897,7 +915,9 @@ export default function App() {
                           className={inputBase}
                           value={vendorFinder.category}
                           onChange={(e) => setVendorFinder((p) => ({ ...p, category: e.target.value }))}
-                          placeholder={state.request.category ? `Default: ${state.request.category}` : "e.g., IT, Office, Vehicle"}
+                          placeholder={
+                            state.request.category ? `Default: ${state.request.category}` : "e.g., IT, Office, Vehicle"
+                          }
                         />
                       </label>
                       <label className="text-sm md:col-span-2">
@@ -915,12 +935,13 @@ export default function App() {
                       <div className="font-semibold text-sm">Search suggestions</div>
                       <div className="mt-2 space-y-2">
                         {finderQueries.length === 0 ? (
-                          <div className="text-sm text-neutral-600">
-                            Add a Request title + spec to generate searches.
-                          </div>
+                          <div className="text-sm text-neutral-600">Add a Request title + spec to generate searches.</div>
                         ) : (
                           finderQueries.map((q, i) => (
-                            <div key={i} className="flex items-start justify-between gap-2 flex-wrap rounded-xl border border-neutral-200 bg-neutral-50 p-2">
+                            <div
+                              key={i}
+                              className="flex items-start justify-between gap-2 flex-wrap rounded-xl border border-neutral-200 bg-neutral-50 p-2"
+                            >
                               <div className="text-sm text-neutral-800 break-words">{q}</div>
                               <div className="flex gap-2">
                                 <button className={btnSecondary} onClick={() => copyText(q)}>
@@ -1163,7 +1184,11 @@ export default function App() {
                         </label>
                         <label className="text-sm">
                           <div className="text-neutral-600">Phone</div>
-                          <input className={inputBase} value={v.phone} onChange={(e) => updateVendor(v.id, { phone: e.target.value })} />
+                          <input
+                            className={inputBase}
+                            value={v.phone}
+                            onChange={(e) => updateVendor(v.id, { phone: e.target.value })}
+                          />
                         </label>
                         <label className="text-sm">
                           <div className="text-neutral-600">Website</div>
@@ -1214,15 +1239,27 @@ export default function App() {
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                   <label className="text-sm">
                     <div className="text-neutral-600">Subject prefix</div>
-                    <input className={inputBase} value={state.rfq.subjectPrefix} onChange={(e) => updateRFQ({ subjectPrefix: e.target.value })} />
+                    <input
+                      className={inputBase}
+                      value={state.rfq.subjectPrefix}
+                      onChange={(e) => updateRFQ({ subjectPrefix: e.target.value })}
+                    />
                   </label>
                   <label className="text-sm">
                     <div className="text-neutral-600">Greeting</div>
-                    <input className={inputBase} value={state.rfq.greeting} onChange={(e) => updateRFQ({ greeting: e.target.value })} />
+                    <input
+                      className={inputBase}
+                      value={state.rfq.greeting}
+                      onChange={(e) => updateRFQ({ greeting: e.target.value })}
+                    />
                   </label>
                   <label className="text-sm">
                     <div className="text-neutral-600">Closing</div>
-                    <input className={inputBase} value={state.rfq.closing} onChange={(e) => updateRFQ({ closing: e.target.value })} />
+                    <input
+                      className={inputBase}
+                      value={state.rfq.closing}
+                      onChange={(e) => updateRFQ({ closing: e.target.value })}
+                    />
                   </label>
                   <label className="text-sm">
                     <div className="text-neutral-600">Signature name (optional)</div>
@@ -1236,7 +1273,11 @@ export default function App() {
 
                   <label className="text-sm md:col-span-2">
                     <div className="text-neutral-600">Payment line</div>
-                    <input className={inputBase} value={state.rfq.paymentLine} onChange={(e) => updateRFQ({ paymentLine: e.target.value })} />
+                    <input
+                      className={inputBase}
+                      value={state.rfq.paymentLine}
+                      onChange={(e) => updateRFQ({ paymentLine: e.target.value })}
+                    />
                   </label>
                 </div>
 
@@ -1511,7 +1552,8 @@ export default function App() {
 
                   <div className="mt-3 text-sm">
                     <div>
-                      <span className="text-neutral-600">Prepared by:</span> {profile.user || state.rfq.signatureName || "-"}
+                      <span className="text-neutral-600">Prepared by:</span>{" "}
+                      {profile.user || state.rfq.signatureName || "-"}
                     </div>
                     <div>
                       <span className="text-neutral-600">Date:</span> {isoToday()}
@@ -1606,7 +1648,9 @@ export default function App() {
                           ) : (
                             quoteRows.map((r) => (
                               <tr key={r.vendorId} className="border-b last:border-b-0">
-                                <td className="py-2 pr-2">{state.compliance.selectedVendorId === r.vendorId ? "✓" : ""}</td>
+                                <td className="py-2 pr-2">
+                                  {state.compliance.selectedVendorId === r.vendorId ? "✓" : ""}
+                                </td>
                                 <td className="py-2 pr-2 font-medium">{r.vendorName}</td>
                                 <td className="py-2 pr-2">{r.amount === null ? "-" : moneyFmt(r.amount)}</td>
                                 <td className="py-2 pr-2">{r.leadTime || "-"}</td>
@@ -1639,6 +1683,53 @@ export default function App() {
                   <div className="mt-6 text-xs text-neutral-500">
                     Storage key: <span className="font-mono">{KEY}</span>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ✅ Help Pack v1 modal (standard) */}
+        {helpOpen && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-3 z-50">
+            <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-neutral-200 overflow-hidden">
+              <div className="p-3 border-b flex items-center justify-between">
+                <div className="font-semibold">Help — Quote-It</div>
+                <button className={btnPrimary} onClick={() => setHelpOpen(false)}>
+                  Close
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-5 space-y-4 text-sm">
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                  <div className="font-semibold">How saving works</div>
+                  <div className="mt-1 text-neutral-700">
+                    This app autosaves locally in your browser (localStorage). There’s no login and no cloud sync.
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                  <div className="font-semibold">Backups (recommended)</div>
+                  <ul className="mt-1 list-disc pl-5 text-neutral-700 space-y-1">
+                    <li>Use <span className="font-semibold">Export</span> to download a JSON backup file.</li>
+                    <li>Use <span className="font-semibold">Import</span> to restore from a JSON file.</li>
+                    <li>Good routine: export weekly, and always before browser resets/new device.</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                  <div className="font-semibold">Storage keys</div>
+                  <div className="mt-2 grid grid-cols-1 gap-2">
+                    {moduleManifest.storageKeys.map((k) => (
+                      <div key={k} className="rounded-xl border border-neutral-200 bg-white px-3 py-2 font-mono text-xs">
+                        {k}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-xs text-neutral-500">
+                  Tip: If something looks “missing”, it’s usually a different browser/profile/device. Import your last export.
                 </div>
               </div>
             </div>
