@@ -57,6 +57,10 @@ function defaultState() {
     phone: "",
     website: "",
     notes: "",
+    tags: "", // comma-separated (optional)
+    category: "", // optional (defaults to request category in finder)
+    city: "", // optional (Germany-only finder convenience)
+    country: "DE",
   });
 
   return {
@@ -190,11 +194,7 @@ const inputBase =
 function StepPill({ label, active, done, onClick }) {
   // Keep Inspect-It look: inactive = btnSecondary, active = btnPrimary
   return (
-    <button
-      onClick={onClick}
-      className={active ? btnPrimary : btnSecondary}
-      title={done ? "Done" : ""}
-    >
+    <button onClick={onClick} className={active ? btnPrimary : btnSecondary} title={done ? "Done" : ""}>
       <span className="inline-flex items-center gap-2">
         <span>{label}</span>
         {done ? <span className="text-xs opacity-90">✓</span> : null}
@@ -203,12 +203,108 @@ function StepPill({ label, active, done, onClick }) {
   );
 }
 
+// ---- Vendor Finder + Library (Germany-only) ----
+const VENDOR_LIBRARY_KEY = "toolstack.quoteit.vendorLibrary.v1";
+
+const norm = (s) => (s || "").toString().trim();
+const parseTags = (s) =>
+  norm(s)
+    .split(",")
+    .map((x) => norm(x))
+    .filter(Boolean);
+
+const uniqBy = (arr, keyFn) => {
+  const seen = new Set();
+  const out = [];
+  for (const x of arr) {
+    const k = keyFn(x);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(x);
+  }
+  return out;
+};
+
+const loadVendorLibrary = () => {
+  try {
+    const raw = localStorage.getItem(VENDOR_LIBRARY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveVendorLibrary = (list) => {
+  try {
+    localStorage.setItem(VENDOR_LIBRARY_KEY, JSON.stringify(list));
+  } catch {
+    // ignore
+  }
+};
+
+const vendorKey = (v) => {
+  const email = norm(v.email).toLowerCase();
+  const web = norm(v.website).toLowerCase().replace(/^https?:\/\//, "");
+  return email || web || norm(v.name).toLowerCase();
+};
+
+const buildVendorSearchTermsDE = ({ request, category, city }) => {
+  const title = norm(request?.title);
+  const spec = norm(request?.spec || request?.description);
+  const where = norm(city) || "Deutschland";
+  const cat = norm(category);
+
+  const base = [title, spec].filter(Boolean).join(" ").trim();
+  const catBit = cat ? cat : "";
+
+  // short, URL-safe-ish; Germany-only intent baked in via location + .de endpoints below
+  const q1 = [base, catBit, where, "Angebot", "Lieferzeit", "E-Mail"].filter(Boolean).join(" ");
+  const q2 = [base, catBit, where, "Händler", "Kontakt", "Ansprechpartner"].filter(Boolean).join(" ");
+  const q3 = [base, where, "Firma", "E-Mail", "Telefon"].filter(Boolean).join(" ");
+
+  return uniqBy([q1, q2, q3].map((x) => norm(x)).filter(Boolean), (x) => x);
+};
+
+const googleDE = (q) => `https://www.google.de/search?q=${encodeURIComponent(q)}`;
+const googleMapsDE = (q) => `https://www.google.de/maps/search/${encodeURIComponent(q)}`;
+
+const pickThreeFromLibrary = ({ library, category, requiredTags = [] }) => {
+  const cat = norm(category).toLowerCase();
+  const tags = requiredTags.map((t) => norm(t).toLowerCase()).filter(Boolean);
+
+  const scored = library.map((v) => {
+    const vCat = norm(v.category).toLowerCase();
+    const vTags = (v.tags || []).map((t) => norm(t).toLowerCase());
+    let score = 0;
+    if (cat && vCat === cat) score += 3;
+    for (const t of tags) if (vTags.includes(t)) score += 2;
+    if (norm(v.email)) score += 1;
+    if (norm(v.website)) score += 1;
+    return { v, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, 3).map((x) => x.v);
+};
+
 export default function App() {
   const [profile, setProfile] = useState(loadProfile());
   const [state, setState] = useState(loadState());
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const importRef = useRef(null);
+
+  // Vendor Finder + Library state
+  const [vendorLibrary, setVendorLibrary] = useState(() => loadVendorLibrary());
+  const [vendorLibSearch, setVendorLibSearch] = useState("");
+  const [vendorFinder, setVendorFinder] = useState({
+    city: "München",
+    category: "",
+    requiredTags: "",
+    quick: { name: "", email: "", website: "", phone: "", tags: "", notes: "" },
+    saveToLibrary: true,
+  });
 
   // ✅ Debounced profile persist (prevents keystroke thrash)
   useEffect(() => {
@@ -225,6 +321,12 @@ export default function App() {
     }, 350);
     return () => clearTimeout(t);
   }, [state]);
+
+  // Persist vendor library
+  useEffect(() => {
+    const t = setTimeout(() => saveVendorLibrary(vendorLibrary), 250);
+    return () => clearTimeout(t);
+  }, [vendorLibrary]);
 
   const step = state.ui.step;
 
@@ -300,7 +402,18 @@ export default function App() {
   }
 
   function addVendor() {
-    const v = { id: uid("v"), name: "", email: "", phone: "", website: "", notes: "" };
+    const v = {
+      id: uid("v"),
+      name: "",
+      email: "",
+      phone: "",
+      website: "",
+      notes: "",
+      tags: "",
+      category: "",
+      city: "",
+      country: "DE",
+    };
     setState((prev) => saveState({ ...prev, vendors: [...prev.vendors, v] }));
   }
 
@@ -400,7 +513,7 @@ export default function App() {
       id: APP_ID,
       name: "Quote-It",
       version: APP_VERSION,
-      storageKeys: [KEY, PROFILE_KEY],
+      storageKeys: [KEY, PROFILE_KEY, VENDOR_LIBRARY_KEY],
       exports: ["print", "json"],
     }),
     []
@@ -416,6 +529,138 @@ export default function App() {
     }
     return out;
   }, [vendors, state.rfq, state.request, profile]);
+
+  // ----- Vendor Finder + Library actions -----
+  const effectiveFinderCategory = norm(vendorFinder.category) || norm(state.request.category);
+  const finderQueries = useMemo(() => {
+    return buildVendorSearchTermsDE({
+      request: state.request,
+      category: effectiveFinderCategory,
+      city: vendorFinder.city,
+    });
+  }, [state.request, effectiveFinderCategory, vendorFinder.city]);
+
+  const addVendorToLibrary = (vendorLike) => {
+    const v = {
+      id: vendorLike.id || uid("libv"),
+      name: norm(vendorLike.name),
+      email: norm(vendorLike.email),
+      phone: norm(vendorLike.phone),
+      website: norm(vendorLike.website),
+      notes: norm(vendorLike.notes),
+      tags: Array.isArray(vendorLike.tags) ? vendorLike.tags : parseTags(vendorLike.tags),
+      category: norm(vendorLike.category) || effectiveFinderCategory || "",
+      city: norm(vendorLike.city) || norm(vendorFinder.city) || "",
+      country: "DE",
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (!v.name) return;
+
+    setVendorLibrary((prev) => {
+      const merged = [...prev];
+      const k = vendorKey(v);
+      const idx = merged.findIndex((x) => vendorKey(x) === k);
+      if (idx >= 0) merged[idx] = { ...merged[idx], ...v, id: merged[idx].id };
+      else merged.push(v);
+      return merged;
+    });
+  };
+
+  const removeVendorFromLibrary = (id) => {
+    setVendorLibrary((prev) => prev.filter((v) => v.id !== id));
+  };
+
+  const addLibraryVendorToCurrent = (libVendor) => {
+    const next = {
+      id: uid("v"),
+      name: norm(libVendor.name),
+      email: norm(libVendor.email),
+      phone: norm(libVendor.phone),
+      website: norm(libVendor.website),
+      notes: norm(libVendor.notes),
+      tags: (libVendor.tags || []).join(", "),
+      category: norm(libVendor.category) || "",
+      city: norm(libVendor.city) || "",
+      country: "DE",
+    };
+
+    // avoid duplicates (same email/website/name) in current vendor list
+    const nextKey = vendorKey(next);
+    const exists = vendors.some((x) => vendorKey(x) === nextKey);
+    if (exists) return;
+
+    setState((prev) => saveState({ ...prev, vendors: [...prev.vendors, next] }));
+  };
+
+  const autoPick3VendorsFromLibrary = () => {
+    const reqTags = parseTags(vendorFinder.requiredTags);
+    const picks = pickThreeFromLibrary({
+      library: vendorLibrary,
+      category: effectiveFinderCategory,
+      requiredTags: reqTags,
+    });
+
+    if (picks.length === 0) return;
+
+    // add up to 3, skipping duplicates
+    for (const p of picks) addLibraryVendorToCurrent(p);
+  };
+
+  const addQuickVendor = () => {
+    const q = vendorFinder.quick;
+    const v = {
+      id: uid("v"),
+      name: norm(q.name),
+      email: norm(q.email),
+      website: norm(q.website),
+      phone: norm(q.phone),
+      notes: norm(q.notes),
+      tags: norm(q.tags),
+      category: effectiveFinderCategory || "",
+      city: norm(vendorFinder.city),
+      country: "DE",
+    };
+    if (!v.name) return;
+
+    // prevent duplicates
+    const k = vendorKey(v);
+    if (vendors.some((x) => vendorKey(x) === k)) return;
+
+    setState((prev) => saveState({ ...prev, vendors: [...prev.vendors, v] }));
+
+    if (vendorFinder.saveToLibrary) {
+      addVendorToLibrary({
+        ...v,
+        tags: parseTags(v.tags),
+      });
+    }
+
+    setVendorFinder((prev) => ({
+      ...prev,
+      quick: { name: "", email: "", website: "", phone: "", tags: "", notes: "" },
+    }));
+  };
+
+  const filteredLibrary = useMemo(() => {
+    const q = norm(vendorLibSearch).toLowerCase();
+    if (!q) return vendorLibrary;
+    return vendorLibrary.filter((v) => {
+      const hay = [
+        v.name,
+        v.email,
+        v.website,
+        v.phone,
+        v.category,
+        v.city,
+        (v.tags || []).join(" "),
+        v.notes,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [vendorLibrary, vendorLibSearch]);
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900">
@@ -512,6 +757,9 @@ export default function App() {
               </label>
               <div className="pt-2 text-xs text-neutral-500">
                 Stored at <span className="font-mono">{PROFILE_KEY}</span>
+              </div>
+              <div className="pt-1 text-xs text-neutral-500">
+                Vendor library <span className="font-mono">{VENDOR_LIBRARY_KEY}</span>
               </div>
             </div>
           </div>
@@ -617,7 +865,241 @@ export default function App() {
 
             {step === 1 && (
               <div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                {/* Vendor Automation Panels */}
+                <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {/* Vendor Finder */}
+                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="font-semibold">Vendor Finder (Germany)</div>
+                        <div className="text-sm text-neutral-600">
+                          One-click searches → quick add → (optional) save to your library.
+                        </div>
+                      </div>
+                      <button className={btnSecondary} onClick={autoPick3VendorsFromLibrary} title="Pick 3 best matches from your saved library">
+                        Auto-pick 3 (from library)
+                      </button>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <label className="text-sm">
+                        <div className="text-neutral-600">City / region</div>
+                        <input
+                          className={inputBase}
+                          value={vendorFinder.city}
+                          onChange={(e) => setVendorFinder((p) => ({ ...p, city: e.target.value }))}
+                          placeholder="e.g., München / Bayern"
+                        />
+                      </label>
+                      <label className="text-sm">
+                        <div className="text-neutral-600">Category (optional)</div>
+                        <input
+                          className={inputBase}
+                          value={vendorFinder.category}
+                          onChange={(e) => setVendorFinder((p) => ({ ...p, category: e.target.value }))}
+                          placeholder={state.request.category ? `Default: ${state.request.category}` : "e.g., IT, Office, Vehicle"}
+                        />
+                      </label>
+                      <label className="text-sm md:col-span-2">
+                        <div className="text-neutral-600">Required tags (optional, comma-separated)</div>
+                        <input
+                          className={inputBase}
+                          value={vendorFinder.requiredTags}
+                          onChange={(e) => setVendorFinder((p) => ({ ...p, requiredTags: e.target.value }))}
+                          placeholder="e.g., local, approved, online"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-3">
+                      <div className="font-semibold text-sm">Search suggestions</div>
+                      <div className="mt-2 space-y-2">
+                        {finderQueries.length === 0 ? (
+                          <div className="text-sm text-neutral-600">
+                            Add a Request title + spec to generate searches.
+                          </div>
+                        ) : (
+                          finderQueries.map((q, i) => (
+                            <div key={i} className="flex items-start justify-between gap-2 flex-wrap rounded-xl border border-neutral-200 bg-neutral-50 p-2">
+                              <div className="text-sm text-neutral-800 break-words">{q}</div>
+                              <div className="flex gap-2">
+                                <button className={btnSecondary} onClick={() => copyText(q)}>
+                                  Copy
+                                </button>
+                                <a className={btnSecondary} href={googleDE(q)} target="_blank" rel="noreferrer">
+                                  Google
+                                </a>
+                                <a className={btnSecondary} href={googleMapsDE(q)} target="_blank" rel="noreferrer">
+                                  Maps
+                                </a>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-3">
+                      <div className="font-semibold text-sm">Quick add vendor</div>
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <label className="text-sm">
+                          <div className="text-neutral-600">Name *</div>
+                          <input
+                            className={inputBase}
+                            value={vendorFinder.quick.name}
+                            onChange={(e) =>
+                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, name: e.target.value } }))
+                            }
+                          />
+                        </label>
+                        <label className="text-sm">
+                          <div className="text-neutral-600">Email</div>
+                          <input
+                            className={inputBase}
+                            value={vendorFinder.quick.email}
+                            onChange={(e) =>
+                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, email: e.target.value } }))
+                            }
+                            placeholder="quotes@vendor.de"
+                          />
+                        </label>
+                        <label className="text-sm">
+                          <div className="text-neutral-600">Phone</div>
+                          <input
+                            className={inputBase}
+                            value={vendorFinder.quick.phone}
+                            onChange={(e) =>
+                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, phone: e.target.value } }))
+                            }
+                          />
+                        </label>
+                        <label className="text-sm">
+                          <div className="text-neutral-600">Website</div>
+                          <input
+                            className={inputBase}
+                            value={vendorFinder.quick.website}
+                            onChange={(e) =>
+                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, website: e.target.value } }))
+                            }
+                            placeholder="https://"
+                          />
+                        </label>
+                        <label className="text-sm md:col-span-2">
+                          <div className="text-neutral-600">Tags (comma-separated)</div>
+                          <input
+                            className={inputBase}
+                            value={vendorFinder.quick.tags}
+                            onChange={(e) =>
+                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, tags: e.target.value } }))
+                            }
+                            placeholder="local, approved, fast"
+                          />
+                        </label>
+                        <label className="text-sm md:col-span-2">
+                          <div className="text-neutral-600">Notes</div>
+                          <input
+                            className={inputBase}
+                            value={vendorFinder.quick.notes}
+                            onChange={(e) =>
+                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, notes: e.target.value } }))
+                            }
+                            placeholder="Any helpful notes"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+                        <label className="flex items-center gap-2 text-sm bg-neutral-50 border border-neutral-200 rounded-full px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={!!vendorFinder.saveToLibrary}
+                            onChange={(e) => setVendorFinder((p) => ({ ...p, saveToLibrary: e.target.checked }))}
+                          />
+                          <span>Save to library</span>
+                        </label>
+
+                        <button className={btnPrimary} onClick={addQuickVendor} disabled={!norm(vendorFinder.quick.name)}>
+                          + Add vendor
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vendor Library */}
+                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <div>
+                        <div className="font-semibold">Vendor Library</div>
+                        <div className="text-sm text-neutral-600">Reusable vendors saved across procurements.</div>
+                      </div>
+                      <div className="text-sm text-neutral-600">
+                        Saved: <span className="font-semibold">{vendorLibrary.length}</span>
+                      </div>
+                    </div>
+
+                    <label className="block text-sm mt-3">
+                      <div className="text-neutral-600">Search library</div>
+                      <input
+                        className={inputBase}
+                        value={vendorLibSearch}
+                        onChange={(e) => setVendorLibSearch(e.target.value)}
+                        placeholder="name, email, website, tags, city..."
+                      />
+                    </label>
+
+                    <div className="mt-3 overflow-auto rounded-2xl border border-neutral-200 bg-white">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-neutral-600">
+                          <tr className="border-b">
+                            <th className="py-2 px-3">Vendor</th>
+                            <th className="py-2 px-3">City</th>
+                            <th className="py-2 px-3">Category</th>
+                            <th className="py-2 px-3">Tags</th>
+                            <th className="py-2 px-3">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredLibrary.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="py-3 px-3 text-neutral-500">
+                                No saved vendors yet.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredLibrary.slice(0, 50).map((v) => (
+                              <tr key={v.id} className="border-b last:border-b-0">
+                                <td className="py-2 px-3">
+                                  <div className="font-medium">{v.name || "-"}</div>
+                                  <div className="text-xs text-neutral-600">{v.email || v.website || ""}</div>
+                                </td>
+                                <td className="py-2 px-3">{v.city || "-"}</td>
+                                <td className="py-2 px-3">{v.category || "-"}</td>
+                                <td className="py-2 px-3">{(v.tags || []).join(", ") || "-"}</td>
+                                <td className="py-2 px-3">
+                                  <div className="flex gap-2 flex-wrap">
+                                    <button className={btnSecondary} onClick={() => addLibraryVendorToCurrent(v)}>
+                                      + Add
+                                    </button>
+                                    <button className={btnSecondary} onClick={() => removeVendorFromLibrary(v.id)}>
+                                      Delete
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mt-2 text-xs text-neutral-500">
+                      Tip: “Auto-pick 3” uses category + tags (if you enter them) to shortlist vendors.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current vendors */}
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <button className={btnSecondary} onClick={addVendor}>
                     + Vendor
                   </button>
@@ -627,16 +1109,38 @@ export default function App() {
                 <div className="mt-4 space-y-3">
                   {vendors.map((v, idx) => (
                     <div key={v.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="font-semibold">Vendor {idx + 1}</div>
-                        <button
-                          className="px-3 py-1.5 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
-                          onClick={() => deleteVendor(v.id)}
-                          disabled={vendors.length <= 1}
-                          title={vendors.length <= 1 ? "Keep at least one vendor" : "Delete vendor"}
-                        >
-                          Delete
-                        </button>
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            className={btnSecondary}
+                            onClick={() =>
+                              addVendorToLibrary({
+                                name: v.name,
+                                email: v.email,
+                                phone: v.phone,
+                                website: v.website,
+                                notes: v.notes,
+                                tags: parseTags(v.tags),
+                                category: v.category || effectiveFinderCategory || "",
+                                city: v.city || vendorFinder.city || "",
+                              })
+                            }
+                            disabled={!norm(v.name)}
+                            title={!norm(v.name) ? "Add a vendor name first" : "Save this vendor to your library"}
+                          >
+                            Save to library
+                          </button>
+
+                          <button
+                            className="px-3 py-1.5 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
+                            onClick={() => deleteVendor(v.id)}
+                            disabled={vendors.length <= 1}
+                            title={vendors.length <= 1 ? "Keep at least one vendor" : "Delete vendor"}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
 
                       <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -654,16 +1158,12 @@ export default function App() {
                             className={inputBase}
                             value={v.email}
                             onChange={(e) => updateVendor(v.id, { email: e.target.value })}
-                            placeholder="quotes@vendor.com"
+                            placeholder="quotes@vendor.de"
                           />
                         </label>
                         <label className="text-sm">
                           <div className="text-neutral-600">Phone</div>
-                          <input
-                            className={inputBase}
-                            value={v.phone}
-                            onChange={(e) => updateVendor(v.id, { phone: e.target.value })}
-                          />
+                          <input className={inputBase} value={v.phone} onChange={(e) => updateVendor(v.id, { phone: e.target.value })} />
                         </label>
                         <label className="text-sm">
                           <div className="text-neutral-600">Website</div>
@@ -672,6 +1172,24 @@ export default function App() {
                             value={v.website}
                             onChange={(e) => updateVendor(v.id, { website: e.target.value })}
                             placeholder="https://"
+                          />
+                        </label>
+                        <label className="text-sm">
+                          <div className="text-neutral-600">City (optional)</div>
+                          <input
+                            className={inputBase}
+                            value={v.city || ""}
+                            onChange={(e) => updateVendor(v.id, { city: e.target.value })}
+                            placeholder={vendorFinder.city || "e.g., München"}
+                          />
+                        </label>
+                        <label className="text-sm">
+                          <div className="text-neutral-600">Tags (optional)</div>
+                          <input
+                            className={inputBase}
+                            value={v.tags || ""}
+                            onChange={(e) => updateVendor(v.id, { tags: e.target.value })}
+                            placeholder="local, approved, fast"
                           />
                         </label>
                       </div>
@@ -696,27 +1214,15 @@ export default function App() {
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                   <label className="text-sm">
                     <div className="text-neutral-600">Subject prefix</div>
-                    <input
-                      className={inputBase}
-                      value={state.rfq.subjectPrefix}
-                      onChange={(e) => updateRFQ({ subjectPrefix: e.target.value })}
-                    />
+                    <input className={inputBase} value={state.rfq.subjectPrefix} onChange={(e) => updateRFQ({ subjectPrefix: e.target.value })} />
                   </label>
                   <label className="text-sm">
                     <div className="text-neutral-600">Greeting</div>
-                    <input
-                      className={inputBase}
-                      value={state.rfq.greeting}
-                      onChange={(e) => updateRFQ({ greeting: e.target.value })}
-                    />
+                    <input className={inputBase} value={state.rfq.greeting} onChange={(e) => updateRFQ({ greeting: e.target.value })} />
                   </label>
                   <label className="text-sm">
                     <div className="text-neutral-600">Closing</div>
-                    <input
-                      className={inputBase}
-                      value={state.rfq.closing}
-                      onChange={(e) => updateRFQ({ closing: e.target.value })}
-                    />
+                    <input className={inputBase} value={state.rfq.closing} onChange={(e) => updateRFQ({ closing: e.target.value })} />
                   </label>
                   <label className="text-sm">
                     <div className="text-neutral-600">Signature name (optional)</div>
@@ -730,11 +1236,7 @@ export default function App() {
 
                   <label className="text-sm md:col-span-2">
                     <div className="text-neutral-600">Payment line</div>
-                    <input
-                      className={inputBase}
-                      value={state.rfq.paymentLine}
-                      onChange={(e) => updateRFQ({ paymentLine: e.target.value })}
-                    />
+                    <input className={inputBase} value={state.rfq.paymentLine} onChange={(e) => updateRFQ({ paymentLine: e.target.value })} />
                   </label>
                 </div>
 
@@ -941,9 +1443,7 @@ export default function App() {
                         ? vendors.find((v) => v.id === state.compliance.selectedVendorId)?.name || "-"
                         : "Not selected"}
                     </div>
-                    <div className="mt-3 text-sm text-neutral-600">
-                      Tip: select vendor in the Quotes comparison table.
-                    </div>
+                    <div className="mt-3 text-sm text-neutral-600">Tip: select vendor in the Quotes comparison table.</div>
                   </div>
 
                   <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
@@ -1011,19 +1511,16 @@ export default function App() {
 
                   <div className="mt-3 text-sm">
                     <div>
-                      <span className="text-neutral-600">Prepared by:</span>{" "}
-                      {profile.user || state.rfq.signatureName || "-"}
+                      <span className="text-neutral-600">Prepared by:</span> {profile.user || state.rfq.signatureName || "-"}
                     </div>
                     <div>
                       <span className="text-neutral-600">Date:</span> {isoToday()}
                     </div>
                     <div>
-                      <span className="text-neutral-600">Reference:</span>{" "}
-                      {state.request.reference || "-"}
+                      <span className="text-neutral-600">Reference:</span> {state.request.reference || "-"}
                     </div>
                     <div>
-                      <span className="text-neutral-600">Generated:</span>{" "}
-                      {new Date().toLocaleString()}
+                      <span className="text-neutral-600">Generated:</span> {new Date().toLocaleString()}
                     </div>
                   </div>
 
@@ -1031,28 +1528,22 @@ export default function App() {
                     <div className="font-semibold">Request summary</div>
                     <div className="mt-1 text-neutral-700">
                       <div>
-                        <span className="text-neutral-600">Title:</span>{" "}
-                        {state.request.title || "-"}
+                        <span className="text-neutral-600">Title:</span> {state.request.title || "-"}
                       </div>
                       <div>
-                        <span className="text-neutral-600">Category:</span>{" "}
-                        {state.request.category || "-"}
+                        <span className="text-neutral-600">Category:</span> {state.request.category || "-"}
                       </div>
                       <div>
-                        <span className="text-neutral-600">Needed by:</span>{" "}
-                        {state.request.neededBy || "-"}
+                        <span className="text-neutral-600">Needed by:</span> {state.request.neededBy || "-"}
                       </div>
                       <div>
-                        <span className="text-neutral-600">Delivery to:</span>{" "}
-                        {state.request.deliveryTo || "-"}
+                        <span className="text-neutral-600">Delivery to:</span> {state.request.deliveryTo || "-"}
                       </div>
                     </div>
 
                     <div className="mt-3">
                       <div className="font-semibold">Specification / items</div>
-                      <div className="text-neutral-700 whitespace-pre-wrap">
-                        {state.request.spec || "-"}
-                      </div>
+                      <div className="text-neutral-700 whitespace-pre-wrap">{state.request.spec || "-"}</div>
                     </div>
 
                     {state.request.notes ? (
@@ -1115,9 +1606,7 @@ export default function App() {
                           ) : (
                             quoteRows.map((r) => (
                               <tr key={r.vendorId} className="border-b last:border-b-0">
-                                <td className="py-2 pr-2">
-                                  {state.compliance.selectedVendorId === r.vendorId ? "✓" : ""}
-                                </td>
+                                <td className="py-2 pr-2">{state.compliance.selectedVendorId === r.vendorId ? "✓" : ""}</td>
                                 <td className="py-2 pr-2 font-medium">{r.vendorName}</td>
                                 <td className="py-2 pr-2">{r.amount === null ? "-" : moneyFmt(r.amount)}</td>
                                 <td className="py-2 pr-2">{r.leadTime || "-"}</td>
@@ -1133,9 +1622,7 @@ export default function App() {
 
                   <div className="mt-4 rounded-2xl border border-neutral-200 p-3 text-sm">
                     <div className="font-semibold">Justification</div>
-                    <div className="text-neutral-700 whitespace-pre-wrap">
-                      {state.compliance.justification || "-"}
-                    </div>
+                    <div className="text-neutral-700 whitespace-pre-wrap">{state.compliance.justification || "-"}</div>
                   </div>
 
                   <div className="mt-6 grid grid-cols-2 gap-6 text-sm">
