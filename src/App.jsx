@@ -1,4 +1,5 @@
-// Quote-It (ToolStack) — module-ready MVP (Styled to match Inspect-It master)
+// Quote-It (ToolStack) — module-ready MVP
+// Styled to match ToolStack Master UI (Check-It master)
 // Paste into: src/App.jsx
 // Requires: Tailwind v4 configured (same as other ToolStack apps).
 
@@ -12,6 +13,9 @@ const KEY = `toolstack.${APP_ID}.${APP_VERSION}`;
 
 // Shared profile (used by all modules later)
 const PROFILE_KEY = "toolstack.profile.v1";
+
+// Vendor Library key (cross-procurement)
+const VENDOR_LIBRARY_KEY = "toolstack.quoteit.vendorLibrary.v1";
 
 // Optional: set later
 const HUB_URL = "https://YOUR-WIX-HUB-URL-HERE";
@@ -58,8 +62,8 @@ function defaultState() {
     website: "",
     notes: "",
     tags: "", // comma-separated (optional)
-    category: "", // optional (defaults to request category in finder)
-    city: "", // optional (Germany-only finder convenience)
+    category: "",
+    city: "",
     country: "DE",
   });
 
@@ -183,29 +187,7 @@ function buildRFQBody({ profile, rfq, request, vendor }) {
   return lines.filter((l) => l !== undefined).join("\n");
 }
 
-// Inspect-It master styles (copied exactly)
-const btnSecondary =
-  "px-3 py-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50 active:translate-y-[1px] transition";
-const btnPrimary =
-  "px-3 py-2 rounded-xl bg-neutral-900 text-white border border-neutral-900 shadow-sm hover:bg-neutral-800 active:translate-y-[1px] transition";
-const inputBase =
-  "w-full mt-1 px-3 py-2 rounded-xl border border-neutral-200 bg-white focus:outline-none focus:ring-2 focus:ring-lime-400/25 focus:border-neutral-300";
-
-function StepPill({ label, active, done, onClick }) {
-  // Keep Inspect-It look: inactive = btnSecondary, active = btnPrimary
-  return (
-    <button onClick={onClick} className={active ? btnPrimary : btnSecondary} title={done ? "Done" : ""}>
-      <span className="inline-flex items-center gap-2">
-        <span>{label}</span>
-        {done ? <span className="text-xs opacity-90">✓</span> : null}
-      </span>
-    </button>
-  );
-}
-
-// ---- Vendor Finder + Library (Germany-only) ----
-const VENDOR_LIBRARY_KEY = "toolstack.quoteit.vendorLibrary.v1";
-
+// ---- Vendor Finder + Library (Germany-only helpers) ----
 const norm = (s) => (s || "").toString().trim();
 const parseTags = (s) =>
   norm(s)
@@ -258,7 +240,6 @@ const buildVendorSearchTermsDE = ({ request, category, city }) => {
   const base = [title, spec].filter(Boolean).join(" ").trim();
   const catBit = cat ? cat : "";
 
-  // short, URL-safe-ish; Germany-only intent baked in via location + .de endpoints below
   const q1 = [base, catBit, where, "Angebot", "Lieferzeit", "E-Mail"].filter(Boolean).join(" ");
   const q2 = [base, catBit, where, "Händler", "Kontakt", "Ansprechpartner"].filter(Boolean).join(" ");
   const q3 = [base, where, "Firma", "E-Mail", "Telefon"].filter(Boolean).join(" ");
@@ -288,13 +269,174 @@ const pickThreeFromLibrary = ({ library, category, requiredTags = [] }) => {
   return scored.slice(0, 3).map((x) => x.v);
 };
 
+// -------------------- ToolStack Master UI (Check-It master) --------------------
+const btnSecondary =
+  "print:hidden px-3 py-2 rounded-xl text-sm font-medium border border-neutral-200 bg-white shadow-sm hover:bg-neutral-50 active:translate-y-[1px] transition disabled:opacity-50 disabled:cursor-not-allowed";
+const btnPrimary =
+  "print:hidden px-3 py-2 rounded-xl text-sm font-medium border border-neutral-700 bg-neutral-700 text-white shadow-sm hover:bg-neutral-600 active:translate-y-[1px] transition disabled:opacity-50 disabled:cursor-not-allowed";
+const btnDanger =
+  "print:hidden px-3 py-2 rounded-xl text-sm font-medium border border-red-200 bg-red-50 text-red-700 shadow-sm hover:bg-red-100 active:translate-y-[1px] transition disabled:opacity-50 disabled:cursor-not-allowed";
+const inputBase =
+  "mt-2 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400/25 focus:border-neutral-300";
+const card = "rounded-2xl bg-white border border-neutral-200 shadow-sm";
+const cardHead = "px-4 py-3 border-b border-neutral-100";
+const cardPad = "p-4";
+
+function SmallButton({ children, onClick, tone = "default", disabled, title, className = "" }) {
+  const cls = tone === "primary" ? btnPrimary : tone === "danger" ? btnDanger : btnSecondary;
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} title={title} className={`${cls} ${className}`}>
+      {children}
+    </button>
+  );
+}
+
+/** Normalized Top Actions (mobile-aligned “table/grid”) */
+const ACTION_BASE =
+  "print:hidden h-10 w-full rounded-xl text-sm font-medium border transition shadow-sm active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center";
+
+function ActionButton({ children, onClick, tone = "default", disabled, title }) {
+  const cls =
+    tone === "primary"
+      ? "bg-neutral-700 hover:bg-neutral-600 text-white border-neutral-700"
+      : tone === "danger"
+        ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+        : "bg-white hover:bg-neutral-50 text-neutral-700 border-neutral-200";
+
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} title={title} className={`${ACTION_BASE} ${cls}`}>
+      {children}
+    </button>
+  );
+}
+
+function ActionFileButton({ children, onFile, accept = "application/json", tone = "primary", title }) {
+  const cls =
+    tone === "primary"
+      ? "bg-neutral-700 hover:bg-neutral-600 text-white border-neutral-700"
+      : "bg-white hover:bg-neutral-50 text-neutral-700 border-neutral-200";
+
+  return (
+    <label title={title} className={`${ACTION_BASE} ${cls} cursor-pointer`}>
+      <span>{children}</span>
+      <input
+        type="file"
+        accept={accept}
+        className="hidden"
+        onChange={(e) => onFile?.(e.target.files?.[0] || null)}
+      />
+    </label>
+  );
+}
+
+function Pill({ children, tone = "default" }) {
+  const cls =
+    tone === "accent"
+      ? "border-lime-200 bg-lime-50 text-neutral-800"
+      : tone === "warn"
+        ? "border-amber-200 bg-amber-50 text-neutral-800"
+        : "border-neutral-200 bg-white text-neutral-800";
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${cls}`}>
+      {children}
+    </span>
+  );
+}
+
+// Help Pack v1 (modal) — match Check-It master
+function HelpModal({ open, onClose }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-2xl rounded-2xl bg-white border border-neutral-200 shadow-xl overflow-hidden">
+        <div className="p-4 border-b border-neutral-100 flex items-start justify-between gap-4">
+          <div>
+            <div className="text-lg font-semibold text-neutral-800">Help</div>
+            <div className="text-sm text-neutral-700 mt-1">How saving works in ToolStack apps.</div>
+            <div className="mt-3 h-[2px] w-52 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
+          </div>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-xl text-sm font-medium border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 transition"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4 text-sm text-neutral-700">
+          <div className="rounded-2xl border border-neutral-200 p-4">
+            <div className="font-semibold text-neutral-800">Autosave (default)</div>
+            <p className="mt-1 text-neutral-700">
+              Your data saves automatically in this browser on this device (localStorage). If you clear browser data or
+              switch devices, it won’t follow automatically.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 p-4">
+            <div className="font-semibold text-neutral-800">Export (backup / move devices)</div>
+            <p className="mt-1 text-neutral-700">
+              Use <span className="font-medium">Export</span> to download a JSON backup file. Save it somewhere safe
+              (Drive/Dropbox/email to yourself).
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 p-4">
+            <div className="font-semibold text-neutral-800">Import (restore)</div>
+            <p className="mt-1 text-neutral-700">
+              Use <span className="font-medium">Import</span> to load a previous JSON backup and continue.
+            </p>
+          </div>
+
+          <div className="text-xs text-neutral-600">
+            Tip: Export once a week (or after big updates) so you always have a clean backup.
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-neutral-100 flex items-center justify-end">
+          <button
+            type="button"
+            className="px-3 py-2 rounded-xl text-sm font-medium border border-neutral-700 bg-neutral-700 text-white hover:bg-neutral-600 transition"
+            onClick={onClose}
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Step pill (styled like master)
+function StepPill({ label, active, done, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`print:hidden px-3 py-2 rounded-xl text-sm font-medium border shadow-sm transition ${
+        active
+          ? "border-neutral-700 bg-neutral-700 text-white hover:bg-neutral-600"
+          : "border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800"
+      }`}
+      title={done ? "Done" : ""}
+    >
+      <span className="inline-flex items-center gap-2">
+        <span>{label}</span>
+        {done ? <span className="text-xs opacity-90">✓</span> : null}
+      </span>
+    </button>
+  );
+}
+
 export default function App() {
   const [profile, setProfile] = useState(loadProfile());
   const [state, setState] = useState(loadState());
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const importRef = useRef(null);
 
   // Vendor Finder + Library state
   const [vendorLibrary, setVendorLibrary] = useState(() => loadVendorLibrary());
@@ -307,7 +449,7 @@ export default function App() {
     saveToLibrary: true,
   });
 
-  // ✅ Debounced profile persist (prevents keystroke thrash)
+  // ✅ Debounced profile persist
   useEffect(() => {
     const t = setTimeout(() => {
       localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
@@ -315,7 +457,7 @@ export default function App() {
     return () => clearTimeout(t);
   }, [profile]);
 
-  // ✅ Debounced state persist (single persist path)
+  // ✅ Debounced state persist
   useEffect(() => {
     const t = setTimeout(() => {
       localStorage.setItem(KEY, JSON.stringify(state));
@@ -329,8 +471,6 @@ export default function App() {
     return () => clearTimeout(t);
   }, [vendorLibrary]);
 
-  const step = state.ui.step;
-
   const steps = useMemo(
     () => [
       { key: "request", label: "1. Request" },
@@ -341,6 +481,8 @@ export default function App() {
     ],
     []
   );
+
+  const step = state.ui.step;
 
   const vendors = state.vendors || [];
   const vendorCount = vendors.filter((v) => String(v.name || "").trim()).length;
@@ -375,15 +517,17 @@ export default function App() {
       });
   }, [vendors, quotesByVendor]);
 
+  const quotesWithAmounts = useMemo(() => quoteRows.filter((x) => x.amount !== null).length, [quoteRows]);
+
   const stepDone = useMemo(() => {
     const r = state.request;
     const requestOk = !!String(r.title || "").trim() && !!String(r.spec || "").trim();
     const vendorsOk = vendorCount >= 3;
     const rfqOk = vendorsOk && emailCount >= 1;
-    const quotesOk = quoteRows.filter((x) => x.amount !== null).length >= 3;
+    const quotesOk = quotesWithAmounts >= 3;
     const packOk = quotesOk && !!state.compliance.selectedVendorId;
     return { requestOk, vendorsOk, rfqOk, quotesOk, packOk };
-  }, [state.request, vendorCount, emailCount, quoteRows, state.compliance.selectedVendorId]);
+  }, [state.request, vendorCount, emailCount, quotesWithAmounts, state.compliance.selectedVendorId]);
 
   function setStep(n) {
     setState((prev) =>
@@ -489,6 +633,7 @@ export default function App() {
   }
 
   function importJSON(file) {
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -586,7 +731,6 @@ export default function App() {
       country: "DE",
     };
 
-    // avoid duplicates (same email/website/name) in current vendor list
     const nextKey = vendorKey(next);
     const exists = vendors.some((x) => vendorKey(x) === nextKey);
     if (exists) return;
@@ -604,7 +748,6 @@ export default function App() {
 
     if (picks.length === 0) return;
 
-    // add up to 3, skipping duplicates
     for (const p of picks) addLibraryVendorToCurrent(p);
   };
 
@@ -624,7 +767,6 @@ export default function App() {
     };
     if (!v.name) return;
 
-    // prevent duplicates
     const k = vendorKey(v);
     if (vendors.some((x) => vendorKey(x) === k)) return;
 
@@ -664,911 +806,67 @@ export default function App() {
   }, [vendorLibrary, vendorLibSearch]);
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900">
-      {/* Print only preview when open */}
+    <div className="min-h-screen bg-neutral-50 text-neutral-800">
+      {/* Print rules */}
+      <style>{`
+        @media print { .print\\:hidden { display: none !important; } }
+      `}</style>
+
       {previewOpen ? (
         <style>{`
           @media print {
             body * { visibility: hidden !important; }
-            #quoteit-print-preview, #quoteit-print-preview * { visibility: visible !important; }
-            #quoteit-print-preview { position: absolute !important; left: 0; top: 0; width: 100%; }
+            #quoteit-print, #quoteit-print * { visibility: visible !important; }
+            #quoteit-print { position: absolute !important; left: 0; top: 0; width: 100%; }
           }
         `}</style>
       ) : null}
 
-      <div className="max-w-6xl mx-auto p-4 sm:p-6">
-        {/* Header (match Inspect-It) */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <div className="text-2xl font-bold tracking-tight">Quote-It</div>
-            <div className="text-sm text-neutral-600">
-              Module-ready ({moduleManifest.id}.{moduleManifest.version}) • Mailto RFQs • 3-Quotes Pack • Print/export
-            </div>
-            <div className="mt-3 h-[2px] w-80 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
-          </div>
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
 
-          {/* ✅ ToolStack standard: normalized Top Actions grid + pinned ? Help */}
-          <div className="w-full sm:w-auto flex items-center justify-end gap-2">
-            <div className="grid grid-cols-4 gap-2 w-full sm:w-auto">
-              <button className={btnSecondary} onClick={() => setPreviewOpen(true)}>
-                Preview
-              </button>
-              <button className={btnSecondary} onClick={printPreview}>
-                Print / Save PDF
-              </button>
-              <button className={btnSecondary} onClick={exportJSON}>
-                Export
-              </button>
-              <button className={btnSecondary} onClick={() => importRef.current?.click()}>
-                Import
-              </button>
-            </div>
-
-            <button
-              className={`${btnSecondary} w-10 h-10 flex items-center justify-center`}
-              onClick={() => setHelpOpen(true)}
-              title="Help"
-              aria-label="Help"
-            >
-              ?
-            </button>
-
-            <input
-              ref={importRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) importJSON(f);
-                e.target.value = "";
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Step pills (same button styles) */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <StepPill label="1. Request" active={step === 0} done={stepDone.requestOk} onClick={() => setStep(0)} />
-          <StepPill label="2. Vendors" active={step === 1} done={stepDone.vendorsOk} onClick={() => setStep(1)} />
-          <StepPill label="3. RFQs" active={step === 2} done={stepDone.rfqOk} onClick={() => setStep(2)} />
-          <StepPill label="4. Quotes" active={step === 3} done={stepDone.quotesOk} onClick={() => setStep(3)} />
-          <StepPill label="5. Pack" active={step === 4} done={stepDone.packOk} onClick={() => setStep(4)} />
-        </div>
-
-        {/* Main grid (match Inspect-It) */}
-        <div className="mt-4 grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Profile card */}
-          <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm p-4">
-            <div className="font-semibold">Profile (shared)</div>
-            <div className="mt-3 space-y-2">
-              <label className="block text-sm">
-                <div className="text-neutral-600">Organization</div>
-                <input
-                  className={inputBase}
-                  value={profile.org}
-                  onChange={(e) => setProfile({ ...profile, org: e.target.value })}
-                />
-              </label>
-              <label className="block text-sm">
-                <div className="text-neutral-600">User</div>
-                <input
-                  className={inputBase}
-                  value={profile.user}
-                  onChange={(e) => setProfile({ ...profile, user: e.target.value })}
-                />
-              </label>
-              <label className="block text-sm">
-                <div className="text-neutral-600">Language</div>
-                <select
-                  className={inputBase}
-                  value={profile.language}
-                  onChange={(e) => setProfile({ ...profile, language: e.target.value })}
-                >
-                  <option value="EN">EN</option>
-                  <option value="DE">DE</option>
-                </select>
-              </label>
-              <div className="pt-2 text-xs text-neutral-500">
-                Stored at <span className="font-mono">{PROFILE_KEY}</span>
-              </div>
-              <div className="pt-1 text-xs text-neutral-500">
-                Vendor library <span className="font-mono">{VENDOR_LIBRARY_KEY}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Main step card */}
-          <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm p-4 lg:col-span-3">
-            {/* Step header row */}
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <div className="font-semibold">{steps[step]?.label || "Quote-It"}</div>
-                <div className="text-sm text-neutral-600">
-                  Vendors named: {vendorCount} • Valid emails: {emailCount} • Quotes with amounts:{" "}
-                  {quoteRows.filter((x) => x.amount !== null).length}
-                </div>
-              </div>
-
-              {/* Step actions */}
-              <div className="flex flex-wrap gap-2">
-                {step > 0 && (
-                  <button className={btnSecondary} onClick={() => setStep(step - 1)}>
-                    ← Back
-                  </button>
-                )}
-                {step < steps.length - 1 && (
-                  <button className={btnPrimary} onClick={() => setStep(step + 1)}>
-                    Next →
-                  </button>
-                )}
+      {/* Preview Modal */}
+      {previewOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setPreviewOpen(false)} />
+          <div className="relative w-full max-w-5xl">
+            <div className="mb-3 rounded-2xl bg-white border border-neutral-200 shadow-sm p-3 flex items-center justify-between gap-3">
+              <div className="text-lg font-semibold text-neutral-800">Print preview</div>
+              <div className="flex items-center gap-2">
+                <button className={btnSecondary} onClick={() => window.print()}>
+                  Print / Save PDF
+                </button>
+                <button className={btnPrimary} onClick={() => setPreviewOpen(false)}>
+                  Close
+                </button>
               </div>
             </div>
 
-            {/* Step content */}
-            {step === 0 && (
-              <div>
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <label className="text-sm">
-                    <div className="text-neutral-600">Title *</div>
-                    <input
-                      className={inputBase}
-                      value={state.request.title}
-                      onChange={(e) => updateRequest({ title: e.target.value })}
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-neutral-600">Category</div>
-                    <input
-                      className={inputBase}
-                      value={state.request.category}
-                      onChange={(e) => updateRequest({ category: e.target.value })}
-                      placeholder="e.g., Vehicle service, IT, Office supplies"
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-neutral-600">Reference</div>
-                    <input
-                      className={inputBase}
-                      value={state.request.reference}
-                      onChange={(e) => updateRequest({ reference: e.target.value })}
-                      placeholder="e.g., PR-2025-001"
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-neutral-600">Needed by</div>
-                    <input
-                      type="date"
-                      className={inputBase}
-                      value={state.request.neededBy}
-                      onChange={(e) => updateRequest({ neededBy: e.target.value })}
-                    />
-                  </label>
-                  <label className="text-sm md:col-span-2">
-                    <div className="text-neutral-600">Delivery to</div>
-                    <input
-                      className={inputBase}
-                      value={state.request.deliveryTo}
-                      onChange={(e) => updateRequest({ deliveryTo: e.target.value })}
-                      placeholder="Address / office / pickup"
-                    />
-                  </label>
-                </div>
-
-                <label className="block text-sm mt-3">
-                  <div className="text-neutral-600">Specification / items *</div>
-                  <textarea
-                    className={`${inputBase} min-h-[120px]`}
-                    value={state.request.spec}
-                    onChange={(e) => updateRequest({ spec: e.target.value })}
-                    placeholder="Describe the exact items/services needed. Include quantities, model numbers, scope, etc."
-                  />
-                </label>
-
-                <label className="block text-sm mt-3">
-                  <div className="text-neutral-600">Notes</div>
-                  <textarea
-                    className={`${inputBase} min-h-[90px]`}
-                    value={state.request.notes}
-                    onChange={(e) => updateRequest({ notes: e.target.value })}
-                    placeholder="Any constraints, preferred brands, budget notes, etc."
-                  />
-                </label>
-              </div>
-            )}
-
-            {step === 1 && (
-              <div>
-                {/* Vendor Automation Panels */}
-                <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {/* Vendor Finder */}
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                    <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div>
-                        <div className="font-semibold">Vendor Finder (Germany)</div>
-                        <div className="text-sm text-neutral-600">
-                          One-click searches → quick add → (optional) save to your library.
-                        </div>
-                      </div>
-                      <button
-                        className={btnSecondary}
-                        onClick={autoPick3VendorsFromLibrary}
-                        title="Pick 3 best matches from your saved library"
-                      >
-                        Auto-pick 3 (from library)
-                      </button>
+            <div className="rounded-2xl bg-white border border-neutral-200 shadow-xl overflow-auto max-h-[80vh]">
+              <div id="quoteit-print" className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-2xl font-bold tracking-tight text-neutral-800">
+                      {profile.org || "ToolStack"} — Three Quotes Pack
                     </div>
-
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <label className="text-sm">
-                        <div className="text-neutral-600">City / region</div>
-                        <input
-                          className={inputBase}
-                          value={vendorFinder.city}
-                          onChange={(e) => setVendorFinder((p) => ({ ...p, city: e.target.value }))}
-                          placeholder="e.g., München / Bayern"
-                        />
-                      </label>
-                      <label className="text-sm">
-                        <div className="text-neutral-600">Category (optional)</div>
-                        <input
-                          className={inputBase}
-                          value={vendorFinder.category}
-                          onChange={(e) => setVendorFinder((p) => ({ ...p, category: e.target.value }))}
-                          placeholder={
-                            state.request.category ? `Default: ${state.request.category}` : "e.g., IT, Office, Vehicle"
-                          }
-                        />
-                      </label>
-                      <label className="text-sm md:col-span-2">
-                        <div className="text-neutral-600">Required tags (optional, comma-separated)</div>
-                        <input
-                          className={inputBase}
-                          value={vendorFinder.requiredTags}
-                          onChange={(e) => setVendorFinder((p) => ({ ...p, requiredTags: e.target.value }))}
-                          placeholder="e.g., local, approved, online"
-                        />
-                      </label>
+                    <div className="text-sm text-neutral-700">
+                      Reference: {state.request.reference || "-"} • Date: {isoToday()}
                     </div>
-
-                    <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-3">
-                      <div className="font-semibold text-sm">Search suggestions</div>
-                      <div className="mt-2 space-y-2">
-                        {finderQueries.length === 0 ? (
-                          <div className="text-sm text-neutral-600">Add a Request title + spec to generate searches.</div>
-                        ) : (
-                          finderQueries.map((q, i) => (
-                            <div
-                              key={i}
-                              className="flex items-start justify-between gap-2 flex-wrap rounded-xl border border-neutral-200 bg-neutral-50 p-2"
-                            >
-                              <div className="text-sm text-neutral-800 break-words">{q}</div>
-                              <div className="flex gap-2">
-                                <button className={btnSecondary} onClick={() => copyText(q)}>
-                                  Copy
-                                </button>
-                                <a className={btnSecondary} href={googleDE(q)} target="_blank" rel="noreferrer">
-                                  Google
-                                </a>
-                                <a className={btnSecondary} href={googleMapsDE(q)} target="_blank" rel="noreferrer">
-                                  Maps
-                                </a>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-3">
-                      <div className="font-semibold text-sm">Quick add vendor</div>
-                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <label className="text-sm">
-                          <div className="text-neutral-600">Name *</div>
-                          <input
-                            className={inputBase}
-                            value={vendorFinder.quick.name}
-                            onChange={(e) =>
-                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, name: e.target.value } }))
-                            }
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-neutral-600">Email</div>
-                          <input
-                            className={inputBase}
-                            value={vendorFinder.quick.email}
-                            onChange={(e) =>
-                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, email: e.target.value } }))
-                            }
-                            placeholder="quotes@vendor.de"
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-neutral-600">Phone</div>
-                          <input
-                            className={inputBase}
-                            value={vendorFinder.quick.phone}
-                            onChange={(e) =>
-                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, phone: e.target.value } }))
-                            }
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-neutral-600">Website</div>
-                          <input
-                            className={inputBase}
-                            value={vendorFinder.quick.website}
-                            onChange={(e) =>
-                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, website: e.target.value } }))
-                            }
-                            placeholder="https://"
-                          />
-                        </label>
-                        <label className="text-sm md:col-span-2">
-                          <div className="text-neutral-600">Tags (comma-separated)</div>
-                          <input
-                            className={inputBase}
-                            value={vendorFinder.quick.tags}
-                            onChange={(e) =>
-                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, tags: e.target.value } }))
-                            }
-                            placeholder="local, approved, fast"
-                          />
-                        </label>
-                        <label className="text-sm md:col-span-2">
-                          <div className="text-neutral-600">Notes</div>
-                          <input
-                            className={inputBase}
-                            value={vendorFinder.quick.notes}
-                            onChange={(e) =>
-                              setVendorFinder((p) => ({ ...p, quick: { ...p.quick, notes: e.target.value } }))
-                            }
-                            placeholder="Any helpful notes"
-                          />
-                        </label>
-                      </div>
-
-                      <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
-                        <label className="flex items-center gap-2 text-sm bg-neutral-50 border border-neutral-200 rounded-full px-3 py-2">
-                          <input
-                            type="checkbox"
-                            checked={!!vendorFinder.saveToLibrary}
-                            onChange={(e) => setVendorFinder((p) => ({ ...p, saveToLibrary: e.target.checked }))}
-                          />
-                          <span>Save to library</span>
-                        </label>
-
-                        <button className={btnPrimary} onClick={addQuickVendor} disabled={!norm(vendorFinder.quick.name)}>
-                          + Add vendor
-                        </button>
-                      </div>
-                    </div>
+                    <div className="mt-3 h-[2px] w-72 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
                   </div>
-
-                  {/* Vendor Library */}
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                    <div className="flex items-start justify-between gap-2 flex-wrap">
-                      <div>
-                        <div className="font-semibold">Vendor Library</div>
-                        <div className="text-sm text-neutral-600">Reusable vendors saved across procurements.</div>
-                      </div>
-                      <div className="text-sm text-neutral-600">
-                        Saved: <span className="font-semibold">{vendorLibrary.length}</span>
-                      </div>
-                    </div>
-
-                    <label className="block text-sm mt-3">
-                      <div className="text-neutral-600">Search library</div>
-                      <input
-                        className={inputBase}
-                        value={vendorLibSearch}
-                        onChange={(e) => setVendorLibSearch(e.target.value)}
-                        placeholder="name, email, website, tags, city..."
-                      />
-                    </label>
-
-                    <div className="mt-3 overflow-auto rounded-2xl border border-neutral-200 bg-white">
-                      <table className="w-full text-sm">
-                        <thead className="text-left text-neutral-600">
-                          <tr className="border-b">
-                            <th className="py-2 px-3">Vendor</th>
-                            <th className="py-2 px-3">City</th>
-                            <th className="py-2 px-3">Category</th>
-                            <th className="py-2 px-3">Tags</th>
-                            <th className="py-2 px-3">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredLibrary.length === 0 ? (
-                            <tr>
-                              <td colSpan={5} className="py-3 px-3 text-neutral-500">
-                                No saved vendors yet.
-                              </td>
-                            </tr>
-                          ) : (
-                            filteredLibrary.slice(0, 50).map((v) => (
-                              <tr key={v.id} className="border-b last:border-b-0">
-                                <td className="py-2 px-3">
-                                  <div className="font-medium">{v.name || "-"}</div>
-                                  <div className="text-xs text-neutral-600">{v.email || v.website || ""}</div>
-                                </td>
-                                <td className="py-2 px-3">{v.city || "-"}</td>
-                                <td className="py-2 px-3">{v.category || "-"}</td>
-                                <td className="py-2 px-3">{(v.tags || []).join(", ") || "-"}</td>
-                                <td className="py-2 px-3">
-                                  <div className="flex gap-2 flex-wrap">
-                                    <button className={btnSecondary} onClick={() => addLibraryVendorToCurrent(v)}>
-                                      + Add
-                                    </button>
-                                    <button className={btnSecondary} onClick={() => removeVendorFromLibrary(v.id)}>
-                                      Delete
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="mt-2 text-xs text-neutral-500">
-                      Tip: “Auto-pick 3” uses category + tags (if you enter them) to shortlist vendors.
-                    </div>
-                  </div>
+                  <div className="text-sm text-neutral-700">Generated: {new Date().toLocaleString()}</div>
                 </div>
 
-                {/* Current vendors */}
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <button className={btnSecondary} onClick={addVendor}>
-                    + Vendor
-                  </button>
-                  <div className="text-sm text-neutral-600">Add at least 3 vendors for compliance.</div>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {vendors.map((v, idx) => (
-                    <div key={v.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="font-semibold">Vendor {idx + 1}</div>
-                        <div className="flex gap-2 flex-wrap">
-                          <button
-                            className={btnSecondary}
-                            onClick={() =>
-                              addVendorToLibrary({
-                                name: v.name,
-                                email: v.email,
-                                phone: v.phone,
-                                website: v.website,
-                                notes: v.notes,
-                                tags: parseTags(v.tags),
-                                category: v.category || effectiveFinderCategory || "",
-                                city: v.city || vendorFinder.city || "",
-                              })
-                            }
-                            disabled={!norm(v.name)}
-                            title={!norm(v.name) ? "Add a vendor name first" : "Save this vendor to your library"}
-                          >
-                            Save to library
-                          </button>
-
-                          <button
-                            className="px-3 py-1.5 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50"
-                            onClick={() => deleteVendor(v.id)}
-                            disabled={vendors.length <= 1}
-                            title={vendors.length <= 1 ? "Keep at least one vendor" : "Delete vendor"}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <label className="text-sm">
-                          <div className="text-neutral-600">Name *</div>
-                          <input
-                            className={inputBase}
-                            value={v.name}
-                            onChange={(e) => updateVendor(v.id, { name: e.target.value })}
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-neutral-600">Email</div>
-                          <input
-                            className={inputBase}
-                            value={v.email}
-                            onChange={(e) => updateVendor(v.id, { email: e.target.value })}
-                            placeholder="quotes@vendor.de"
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-neutral-600">Phone</div>
-                          <input
-                            className={inputBase}
-                            value={v.phone}
-                            onChange={(e) => updateVendor(v.id, { phone: e.target.value })}
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-neutral-600">Website</div>
-                          <input
-                            className={inputBase}
-                            value={v.website}
-                            onChange={(e) => updateVendor(v.id, { website: e.target.value })}
-                            placeholder="https://"
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-neutral-600">City (optional)</div>
-                          <input
-                            className={inputBase}
-                            value={v.city || ""}
-                            onChange={(e) => updateVendor(v.id, { city: e.target.value })}
-                            placeholder={vendorFinder.city || "e.g., München"}
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-neutral-600">Tags (optional)</div>
-                          <input
-                            className={inputBase}
-                            value={v.tags || ""}
-                            onChange={(e) => updateVendor(v.id, { tags: e.target.value })}
-                            placeholder="local, approved, fast"
-                          />
-                        </label>
-                      </div>
-
-                      <label className="block text-sm mt-2">
-                        <div className="text-neutral-600">Notes</div>
-                        <input
-                          className={inputBase}
-                          value={v.notes}
-                          onChange={(e) => updateVendor(v.id, { notes: e.target.value })}
-                          placeholder="e.g., preferred / fast / local"
-                        />
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div>
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <label className="text-sm">
-                    <div className="text-neutral-600">Subject prefix</div>
-                    <input
-                      className={inputBase}
-                      value={state.rfq.subjectPrefix}
-                      onChange={(e) => updateRFQ({ subjectPrefix: e.target.value })}
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-neutral-600">Greeting</div>
-                    <input
-                      className={inputBase}
-                      value={state.rfq.greeting}
-                      onChange={(e) => updateRFQ({ greeting: e.target.value })}
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-neutral-600">Closing</div>
-                    <input
-                      className={inputBase}
-                      value={state.rfq.closing}
-                      onChange={(e) => updateRFQ({ closing: e.target.value })}
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-neutral-600">Signature name (optional)</div>
-                    <input
-                      className={inputBase}
-                      value={state.rfq.signatureName}
-                      onChange={(e) => updateRFQ({ signatureName: e.target.value })}
-                      placeholder="If profile user is blank"
-                    />
-                  </label>
-
-                  <label className="text-sm md:col-span-2">
-                    <div className="text-neutral-600">Payment line</div>
-                    <input
-                      className={inputBase}
-                      value={state.rfq.paymentLine}
-                      onChange={(e) => updateRFQ({ paymentLine: e.target.value })}
-                    />
-                  </label>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                  {[
-                    ["leadTime", "Lead time"],
-                    ["validity", "Validity"],
-                    ["delivery", "Delivery"],
-                    ["payment", "Payment terms"],
-                  ].map(([k, label]) => (
-                    <label
-                      key={k}
-                      className="flex items-center gap-2 bg-white border border-neutral-200 rounded-full px-3 py-2"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!state.rfq.include?.[k]}
-                        onChange={(e) =>
-                          updateRFQ({ include: { ...(state.rfq.include || {}), [k]: e.target.checked } })
-                        }
-                      />
-                      <span>{label}</span>
-                    </label>
-                  ))}
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {vendors
-                    .filter((v) => String(v.name || "").trim())
-                    .map((v) => {
-                      const t = rfqTextByVendor.get(v.id);
-                      const subject = t?.subject || "";
-                      const body = t?.body || "";
-                      const canMail = isEmail(v.email);
-
-                      return (
-                        <div key={v.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                          <div className="flex items-start justify-between gap-3 flex-wrap">
-                            <div>
-                              <div className="font-semibold">{v.name}</div>
-                              <div className="text-sm text-neutral-600">{v.email || "No email"}</div>
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                              <button className={btnSecondary} onClick={() => copyText(subject)}>
-                                Copy subject
-                              </button>
-                              <button className={btnSecondary} onClick={() => copyText(body)}>
-                                Copy body
-                              </button>
-                              <a
-                                className={canMail ? btnPrimary : `${btnSecondary} pointer-events-none opacity-60`}
-                                href={canMail ? buildMailto(v.email, subject, body) : undefined}
-                              >
-                                Email (mailto)
-                              </a>
-                            </div>
-                          </div>
-
-                          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div className="rounded-xl bg-white border border-neutral-200 p-2">
-                              <div className="text-xs text-neutral-600">Subject</div>
-                              <div className="text-sm break-words">{subject || "-"}</div>
-                            </div>
-                            <div className="rounded-xl bg-white border border-neutral-200 p-2">
-                              <div className="text-xs text-neutral-600">Body (preview)</div>
-                              <pre className="text-xs whitespace-pre-wrap break-words">{body || "-"}</pre>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div>
-                <div className="mt-4 space-y-3">
-                  {vendors
-                    .filter((v) => String(v.name || "").trim())
-                    .map((v) => {
-                      const q = quotesByVendor.get(v.id) || {};
-                      return (
-                        <div key={v.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                          <div className="flex items-start justify-between gap-3 flex-wrap">
-                            <div>
-                              <div className="font-semibold">{v.name}</div>
-                              <div className="text-sm text-neutral-600">{v.email || ""}</div>
-                            </div>
-                            <div className="text-sm text-neutral-600">
-                              Amount: <span className="font-semibold">{q.amount ? moneyFmt(q.amount) : "-"}</span>
-                            </div>
-                          </div>
-
-                          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <label className="text-sm">
-                              <div className="text-neutral-600">Total amount</div>
-                              <input
-                                type="number"
-                                step="0.01"
-                                className={inputBase}
-                                value={q.amount ?? ""}
-                                onChange={(e) => upsertQuote(v.id, { amount: e.target.value })}
-                                placeholder="e.g., 199.99"
-                              />
-                            </label>
-                            <label className="text-sm">
-                              <div className="text-neutral-600">Lead time</div>
-                              <input
-                                className={inputBase}
-                                value={q.leadTime ?? ""}
-                                onChange={(e) => upsertQuote(v.id, { leadTime: e.target.value })}
-                                placeholder="e.g., 3-5 business days"
-                              />
-                            </label>
-                            <label className="text-sm">
-                              <div className="text-neutral-600">Validity</div>
-                              <input
-                                className={inputBase}
-                                value={q.validity ?? ""}
-                                onChange={(e) => upsertQuote(v.id, { validity: e.target.value })}
-                                placeholder="e.g., valid 14 days"
-                              />
-                            </label>
-                            <label className="text-sm">
-                              <div className="text-neutral-600">Proof reference</div>
-                              <input
-                                className={inputBase}
-                                value={q.proof ?? ""}
-                                onChange={(e) => upsertQuote(v.id, { proof: e.target.value })}
-                                placeholder="e.g., email 24.12 / PDF filename"
-                              />
-                            </label>
-                          </div>
-
-                          <label className="block text-sm mt-2">
-                            <div className="text-neutral-600">Notes</div>
-                            <input
-                              className={inputBase}
-                              value={q.notes ?? ""}
-                              onChange={(e) => upsertQuote(v.id, { notes: e.target.value })}
-                              placeholder="Any special terms / observations"
-                            />
-                          </label>
-                        </div>
-                      );
-                    })}
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                  <div className="font-semibold">Comparison (auto-sorted by amount)</div>
-                  <div className="mt-2 overflow-auto">
-                    <table className="w-full text-sm">
-                      <thead className="text-left text-neutral-600">
-                        <tr className="border-b">
-                          <th className="py-2 pr-2">Select</th>
-                          <th className="py-2 pr-2">Vendor</th>
-                          <th className="py-2 pr-2">Amount</th>
-                          <th className="py-2 pr-2">Lead time</th>
-                          <th className="py-2 pr-2">Validity</th>
-                          <th className="py-2 pr-2">Proof</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {quoteRows.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="py-3 text-neutral-500">
-                              Add vendor names first.
-                            </td>
-                          </tr>
-                        ) : (
-                          quoteRows.map((r) => (
-                            <tr key={r.vendorId} className="border-b last:border-b-0">
-                              <td className="py-2 pr-2">
-                                <input
-                                  type="radio"
-                                  name="selectedVendor"
-                                  checked={state.compliance.selectedVendorId === r.vendorId}
-                                  onChange={() => selectVendor(r.vendorId)}
-                                />
-                              </td>
-                              <td className="py-2 pr-2 font-medium">{r.vendorName}</td>
-                              <td className="py-2 pr-2">{r.amount === null ? "-" : moneyFmt(r.amount)}</td>
-                              <td className="py-2 pr-2">{r.leadTime || "-"}</td>
-                              <td className="py-2 pr-2">{r.validity || "-"}</td>
-                              <td className="py-2 pr-2">{r.proof || "-"}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 4 && (
-              <div>
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                    <div className="font-semibold">Selected vendor</div>
-                    <div className="mt-2 text-sm">
-                      {state.compliance.selectedVendorId
-                        ? vendors.find((v) => v.id === state.compliance.selectedVendorId)?.name || "-"
-                        : "Not selected"}
-                    </div>
-                    <div className="mt-3 text-sm text-neutral-600">Tip: select vendor in the Quotes comparison table.</div>
-                  </div>
-
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                    <div className="font-semibold">Compliance checklist</div>
-                    <ul className="mt-2 text-sm text-neutral-700 list-disc pl-5">
-                      <li>Request documented (title + specification)</li>
-                      <li>At least 3 vendors contacted</li>
-                      <li>At least 3 quotes recorded</li>
-                      <li>Selection justified</li>
-                    </ul>
-                  </div>
-                </div>
-
-                <label className="block text-sm mt-3">
-                  <div className="text-neutral-600">Justification (why selected vendor)</div>
-                  <textarea
-                    className={`${inputBase} min-h-[120px]`}
-                    value={state.compliance.justification}
-                    onChange={(e) =>
-                      setState((prev) =>
-                        saveState({
-                          ...prev,
-                          compliance: { ...prev.compliance, justification: e.target.value },
-                        })
-                      )
-                    }
-                    placeholder="e.g., lowest total cost, fastest delivery, compliant spec, best warranty..."
-                  />
-                </label>
-
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <button className={btnSecondary} onClick={() => setStep(3)}>
-                    Back to quotes
-                  </button>
-                  <button className={btnPrimary} onClick={() => setPreviewOpen(true)}>
-                    Open preview
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Preview modal (match Inspect-It) */}
-        {previewOpen && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-3 z-50">
-            <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-neutral-200 overflow-hidden">
-              <div className="p-3 border-b flex items-center justify-between">
-                <div className="font-semibold">Preview — Three Quotes Pack</div>
-                <div className="flex gap-2">
-                  <button className={btnSecondary} onClick={printPreview}>
-                    Print / Save PDF
-                  </button>
-                  <button className={btnPrimary} onClick={() => setPreviewOpen(false)}>
-                    Close
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 overflow-auto max-h-[80vh]">
-                <div id="quoteit-print-preview">
-                  <div className="text-xl font-bold">{profile.org || "ToolStack"}</div>
-                  <div className="text-sm text-neutral-600">Three Quotes Pack</div>
-                  <div className="mt-2 h-[2px] w-72 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
-
-                  <div className="mt-3 text-sm">
-                    <div>
-                      <span className="text-neutral-600">Prepared by:</span>{" "}
+                <div className="mt-5 space-y-5 text-sm">
+                  <div className="rounded-2xl border border-neutral-200 p-4">
+                    <div className="font-semibold text-neutral-800">Prepared by</div>
+                    <div className="mt-1 text-neutral-700">
                       {profile.user || state.rfq.signatureName || "-"}
                     </div>
-                    <div>
-                      <span className="text-neutral-600">Date:</span> {isoToday()}
-                    </div>
-                    <div>
-                      <span className="text-neutral-600">Reference:</span> {state.request.reference || "-"}
-                    </div>
-                    <div>
-                      <span className="text-neutral-600">Generated:</span> {new Date().toLocaleString()}
-                    </div>
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-neutral-200 p-3 text-sm">
-                    <div className="font-semibold">Request summary</div>
-                    <div className="mt-1 text-neutral-700">
+                  <div className="rounded-2xl border border-neutral-200 p-4">
+                    <div className="font-semibold text-neutral-800">Request summary</div>
+                    <div className="mt-2 text-neutral-700 space-y-1">
                       <div>
                         <span className="text-neutral-600">Title:</span> {state.request.title || "-"}
                       </div>
@@ -1584,20 +882,20 @@ export default function App() {
                     </div>
 
                     <div className="mt-3">
-                      <div className="font-semibold">Specification / items</div>
-                      <div className="text-neutral-700 whitespace-pre-wrap">{state.request.spec || "-"}</div>
+                      <div className="font-semibold text-neutral-800">Specification / items</div>
+                      <div className="text-neutral-700 whitespace-pre-wrap mt-1">{state.request.spec || "-"}</div>
                     </div>
 
                     {state.request.notes ? (
                       <div className="mt-3">
-                        <div className="font-semibold">Notes</div>
-                        <div className="text-neutral-700 whitespace-pre-wrap">{state.request.notes}</div>
+                        <div className="font-semibold text-neutral-800">Notes</div>
+                        <div className="text-neutral-700 whitespace-pre-wrap mt-1">{state.request.notes}</div>
                       </div>
                     ) : null}
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-neutral-200 p-3 text-sm">
-                    <div className="font-semibold">Vendors contacted</div>
+                  <div className="rounded-2xl border border-neutral-200 p-4">
+                    <div className="font-semibold text-neutral-800">Vendors contacted</div>
                     <div className="mt-2 overflow-auto">
                       <table className="w-full text-sm">
                         <thead className="text-left text-neutral-600">
@@ -1624,8 +922,8 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-neutral-200 p-3 text-sm">
-                    <div className="font-semibold">Quotes comparison</div>
+                  <div className="rounded-2xl border border-neutral-200 p-4">
+                    <div className="font-semibold text-neutral-800">Quotes comparison</div>
                     <div className="mt-2 overflow-auto">
                       <table className="w-full text-sm">
                         <thead className="text-left text-neutral-600">
@@ -1664,12 +962,14 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-neutral-200 p-3 text-sm">
-                    <div className="font-semibold">Justification</div>
-                    <div className="text-neutral-700 whitespace-pre-wrap">{state.compliance.justification || "-"}</div>
+                  <div className="rounded-2xl border border-neutral-200 p-4">
+                    <div className="font-semibold text-neutral-800">Justification</div>
+                    <div className="text-neutral-700 whitespace-pre-wrap mt-1">
+                      {state.compliance.justification || "-"}
+                    </div>
                   </div>
 
-                  <div className="mt-6 grid grid-cols-2 gap-6 text-sm">
+                  <div className="mt-2 grid grid-cols-2 gap-6 text-sm">
                     <div>
                       <div className="text-neutral-600">Prepared by</div>
                       <div className="mt-8 border-t pt-2">Signature</div>
@@ -1680,64 +980,865 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="mt-6 text-xs text-neutral-500">
-                    Storage key: <span className="font-mono">{KEY}</span>
+                  <div className="text-xs text-neutral-600 mt-2">
+                    ToolStack • Quote-It • Storage key: <span className="font-mono">{KEY}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      ) : null}
 
-        {/* ✅ Help Pack v1 modal (standard) */}
-        {helpOpen && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-3 z-50">
-            <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-neutral-200 overflow-hidden">
-              <div className="p-3 border-b flex items-center justify-between">
-                <div className="font-semibold">Help — Quote-It</div>
-                <button className={btnPrimary} onClick={() => setHelpOpen(false)}>
-                  Close
-                </button>
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-4xl sm:text-5xl font-black tracking-tight text-neutral-700">
+              <span>Quote</span>
+              <span className="text-lime-500">It</span>
+            </div>
+            <div className="text-sm text-neutral-700">RFQs (mailto), vendor library, quote comparison, print-ready pack.</div>
+            <div className="mt-3 h-[2px] w-80 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Pill tone="accent">{vendorCount} vendors</Pill>
+              <Pill>{emailCount} emails</Pill>
+              <Pill>{quotesWithAmounts} quotes</Pill>
+              {stepDone.packOk ? <Pill tone="accent">Pack ready</Pill> : <Pill>In progress</Pill>}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StepPill label="1. Request" active={step === 0} done={stepDone.requestOk} onClick={() => setStep(0)} />
+              <StepPill label="2. Vendors" active={step === 1} done={stepDone.vendorsOk} onClick={() => setStep(1)} />
+              <StepPill label="3. RFQs" active={step === 2} done={stepDone.rfqOk} onClick={() => setStep(2)} />
+              <StepPill label="4. Quotes" active={step === 3} done={stepDone.quotesOk} onClick={() => setStep(3)} />
+              <StepPill label="5. Pack" active={step === 4} done={stepDone.packOk} onClick={() => setStep(4)} />
+            </div>
+          </div>
+
+          {/* Normalized top actions (grid “table”) + pinned Help icon */}
+          <div className="w-full sm:w-[680px]">
+            <div className="relative">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 pr-12">
+                <ActionButton onClick={() => setPreviewOpen(true)} disabled={false}>
+                  Preview
+                </ActionButton>
+                <ActionButton onClick={printPreview}>Print / Save PDF</ActionButton>
+                <ActionButton onClick={exportJSON}>Export</ActionButton>
+                <ActionFileButton onFile={(f) => importJSON(f)} tone="primary" title="Import JSON backup">
+                  Import
+                </ActionFileButton>
               </div>
 
-              <div className="p-4 sm:p-5 space-y-4 text-sm">
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                  <div className="font-semibold">How saving works</div>
-                  <div className="mt-1 text-neutral-700">
-                    This app autosaves locally in your browser (localStorage). There’s no login and no cloud sync.
+              <button
+                type="button"
+                title="Help"
+                onClick={() => setHelpOpen(true)}
+                className="print:hidden absolute right-0 top-0 h-10 w-10 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 shadow-sm flex items-center justify-center font-bold text-neutral-800"
+                aria-label="Help"
+              >
+                ?
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main layout */}
+        <div className="mt-5 grid grid-cols-1 lg:grid-cols-4 gap-3">
+          {/* Profile */}
+          <div className={card}>
+            <div className={cardHead}>
+              <div className="font-semibold text-neutral-800">Profile (shared)</div>
+              <div className="text-xs text-neutral-600 mt-1">Stored at {PROFILE_KEY}</div>
+            </div>
+            <div className={`${cardPad} space-y-3`}>
+              <div>
+                <label className="text-sm text-neutral-700 font-medium">Organization</label>
+                <input
+                  className={inputBase}
+                  value={profile.org}
+                  onChange={(e) => setProfile({ ...profile, org: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-neutral-700 font-medium">User</label>
+                <input
+                  className={inputBase}
+                  value={profile.user}
+                  onChange={(e) => setProfile({ ...profile, user: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-neutral-700 font-medium">Language</label>
+                <select
+                  className={inputBase}
+                  value={profile.language}
+                  onChange={(e) => setProfile({ ...profile, language: e.target.value })}
+                >
+                  <option value="EN">EN</option>
+                  <option value="DE">DE</option>
+                </select>
+              </div>
+
+              <div className="text-xs text-neutral-600">
+                Module key: <span className="font-mono">{KEY}</span>
+              </div>
+              <div className="text-xs text-neutral-600">
+                Vendor library: <span className="font-mono">{VENDOR_LIBRARY_KEY}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Main step panel */}
+          <div className={`${card} lg:col-span-3`}>
+            <div className={`${cardHead} flex items-end justify-between gap-3 flex-wrap`}>
+              <div>
+                <div className="font-semibold text-neutral-800">{steps[step]?.label || "Quote-It"}</div>
+                <div className="text-xs text-neutral-600 mt-1">
+                  Vendors named: {vendorCount} • Valid emails: {emailCount} • Quotes with amounts: {quotesWithAmounts}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <SmallButton onClick={() => setStep(step - 1)} disabled={step === 0}>
+                  ← Back
+                </SmallButton>
+                <SmallButton tone="primary" onClick={() => setStep(step + 1)} disabled={step === steps.length - 1}>
+                  Next →
+                </SmallButton>
+              </div>
+            </div>
+
+            <div className={cardPad}>
+              {/* STEP 1: Request */}
+              {step === 0 ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm text-neutral-700 font-medium">Title *</label>
+                      <input
+                        className={inputBase}
+                        value={state.request.title}
+                        onChange={(e) => updateRequest({ title: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-neutral-700 font-medium">Category</label>
+                      <input
+                        className={inputBase}
+                        value={state.request.category}
+                        onChange={(e) => updateRequest({ category: e.target.value })}
+                        placeholder="e.g., Vehicle service, IT, Office supplies"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-neutral-700 font-medium">Reference</label>
+                      <input
+                        className={inputBase}
+                        value={state.request.reference}
+                        onChange={(e) => updateRequest({ reference: e.target.value })}
+                        placeholder="e.g., PR-2025-001"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-neutral-700 font-medium">Needed by</label>
+                      <input
+                        type="date"
+                        className={inputBase}
+                        value={state.request.neededBy}
+                        onChange={(e) => updateRequest({ neededBy: e.target.value })}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-sm text-neutral-700 font-medium">Delivery to</label>
+                      <input
+                        className={inputBase}
+                        value={state.request.deliveryTo}
+                        onChange={(e) => updateRequest({ deliveryTo: e.target.value })}
+                        placeholder="Address / office / pickup"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-neutral-700 font-medium">Specification / items *</label>
+                    <textarea
+                      className={`${inputBase} min-h-[140px]`}
+                      value={state.request.spec}
+                      onChange={(e) => updateRequest({ spec: e.target.value })}
+                      placeholder="Describe exact items/services needed. Include quantities, model numbers, scope, etc."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-neutral-700 font-medium">Notes</label>
+                    <textarea
+                      className={`${inputBase} min-h-[100px]`}
+                      value={state.request.notes}
+                      onChange={(e) => updateRequest({ notes: e.target.value })}
+                      placeholder="Constraints, preferred brands, budget notes, etc."
+                    />
                   </div>
                 </div>
+              ) : null}
 
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                  <div className="font-semibold">Backups (recommended)</div>
-                  <ul className="mt-1 list-disc pl-5 text-neutral-700 space-y-1">
-                    <li>Use <span className="font-semibold">Export</span> to download a JSON backup file.</li>
-                    <li>Use <span className="font-semibold">Import</span> to restore from a JSON file.</li>
-                    <li>Good routine: export weekly, and always before browser resets/new device.</li>
-                  </ul>
-                </div>
+              {/* STEP 2: Vendors */}
+              {step === 1 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {/* Vendor Finder */}
+                    <div className="rounded-2xl border border-neutral-200 bg-white">
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-start justify-between gap-3 flex-wrap">
+                        <div>
+                          <div className="font-semibold text-neutral-800">Vendor Finder (Germany)</div>
+                          <div className="text-xs text-neutral-600 mt-1">
+                            One-click searches → quick add → (optional) save to your library.
+                          </div>
+                        </div>
+                        <SmallButton onClick={autoPick3VendorsFromLibrary} title="Pick 3 best matches from your saved library">
+                          Auto-pick 3
+                        </SmallButton>
+                      </div>
 
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                  <div className="font-semibold">Storage keys</div>
-                  <div className="mt-2 grid grid-cols-1 gap-2">
-                    {moduleManifest.storageKeys.map((k) => (
-                      <div key={k} className="rounded-xl border border-neutral-200 bg-white px-3 py-2 font-mono text-xs">
-                        {k}
+                      <div className="p-4 space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-sm text-neutral-700 font-medium">City / region</label>
+                            <input
+                              className={inputBase}
+                              value={vendorFinder.city}
+                              onChange={(e) => setVendorFinder((p) => ({ ...p, city: e.target.value }))}
+                              placeholder="e.g., München / Bayern"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm text-neutral-700 font-medium">Category (optional)</label>
+                            <input
+                              className={inputBase}
+                              value={vendorFinder.category}
+                              onChange={(e) => setVendorFinder((p) => ({ ...p, category: e.target.value }))}
+                              placeholder={state.request.category ? `Default: ${state.request.category}` : "e.g., IT, Office, Vehicle"}
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="text-sm text-neutral-700 font-medium">
+                              Required tags (optional, comma-separated)
+                            </label>
+                            <input
+                              className={inputBase}
+                              value={vendorFinder.requiredTags}
+                              onChange={(e) => setVendorFinder((p) => ({ ...p, requiredTags: e.target.value }))}
+                              placeholder="e.g., local, approved, online"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                          <div className="font-semibold text-neutral-800 text-sm">Search suggestions</div>
+                          <div className="mt-2 space-y-2">
+                            {finderQueries.length === 0 ? (
+                              <div className="text-sm text-neutral-600">Add a Request title + spec to generate searches.</div>
+                            ) : (
+                              finderQueries.map((q, i) => (
+                                <div key={i} className="rounded-2xl border border-neutral-200 bg-white p-3">
+                                  <div className="text-sm text-neutral-800 break-words">{q}</div>
+                                  <div className="mt-2 flex gap-2 flex-wrap">
+                                    <SmallButton onClick={() => copyText(q)}>Copy</SmallButton>
+                                    <a className={btnSecondary} href={googleDE(q)} target="_blank" rel="noreferrer">
+                                      Google
+                                    </a>
+                                    <a className={btnSecondary} href={googleMapsDE(q)} target="_blank" rel="noreferrer">
+                                      Maps
+                                    </a>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                          <div className="font-semibold text-neutral-800 text-sm">Quick add vendor</div>
+
+                          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">Name *</label>
+                              <input
+                                className={inputBase}
+                                value={vendorFinder.quick.name}
+                                onChange={(e) =>
+                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, name: e.target.value } }))
+                                }
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">Email</label>
+                              <input
+                                className={inputBase}
+                                value={vendorFinder.quick.email}
+                                onChange={(e) =>
+                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, email: e.target.value } }))
+                                }
+                                placeholder="quotes@vendor.de"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">Phone</label>
+                              <input
+                                className={inputBase}
+                                value={vendorFinder.quick.phone}
+                                onChange={(e) =>
+                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, phone: e.target.value } }))
+                                }
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">Website</label>
+                              <input
+                                className={inputBase}
+                                value={vendorFinder.quick.website}
+                                onChange={(e) =>
+                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, website: e.target.value } }))
+                                }
+                                placeholder="https://"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="text-sm text-neutral-700 font-medium">Tags (comma-separated)</label>
+                              <input
+                                className={inputBase}
+                                value={vendorFinder.quick.tags}
+                                onChange={(e) =>
+                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, tags: e.target.value } }))
+                                }
+                                placeholder="local, approved, fast"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="text-sm text-neutral-700 font-medium">Notes</label>
+                              <input
+                                className={inputBase}
+                                value={vendorFinder.quick.notes}
+                                onChange={(e) =>
+                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, notes: e.target.value } }))
+                                }
+                                placeholder="Any helpful notes"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+                            <label className="flex items-center gap-2 text-sm bg-white border border-neutral-200 rounded-full px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={!!vendorFinder.saveToLibrary}
+                                onChange={(e) => setVendorFinder((p) => ({ ...p, saveToLibrary: e.target.checked }))}
+                              />
+                              <span>Save to library</span>
+                            </label>
+
+                            <SmallButton
+                              tone="primary"
+                              onClick={addQuickVendor}
+                              disabled={!norm(vendorFinder.quick.name)}
+                            >
+                              + Add vendor
+                            </SmallButton>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Vendor Library */}
+                    <div className="rounded-2xl border border-neutral-200 bg-white">
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-start justify-between gap-2 flex-wrap">
+                        <div>
+                          <div className="font-semibold text-neutral-800">Vendor Library</div>
+                          <div className="text-xs text-neutral-600 mt-1">Reusable vendors saved across procurements.</div>
+                        </div>
+                        <div className="text-xs text-neutral-600">
+                          Saved: <span className="font-semibold">{vendorLibrary.length}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 space-y-3">
+                        <div>
+                          <label className="text-sm text-neutral-700 font-medium">Search library</label>
+                          <input
+                            className={inputBase}
+                            value={vendorLibSearch}
+                            onChange={(e) => setVendorLibSearch(e.target.value)}
+                            placeholder="name, email, website, tags, city..."
+                          />
+                        </div>
+
+                        <div className="overflow-auto rounded-2xl border border-neutral-200">
+                          <table className="w-full text-sm">
+                            <thead className="text-left text-neutral-600">
+                              <tr className="border-b">
+                                <th className="py-2 px-3">Vendor</th>
+                                <th className="py-2 px-3">City</th>
+                                <th className="py-2 px-3">Category</th>
+                                <th className="py-2 px-3">Tags</th>
+                                <th className="py-2 px-3">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredLibrary.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="py-3 px-3 text-neutral-500">
+                                    No saved vendors yet.
+                                  </td>
+                                </tr>
+                              ) : (
+                                filteredLibrary.slice(0, 50).map((v) => (
+                                  <tr key={v.id} className="border-b last:border-b-0">
+                                    <td className="py-2 px-3">
+                                      <div className="font-medium">{v.name || "-"}</div>
+                                      <div className="text-xs text-neutral-600">{v.email || v.website || ""}</div>
+                                    </td>
+                                    <td className="py-2 px-3">{v.city || "-"}</td>
+                                    <td className="py-2 px-3">{v.category || "-"}</td>
+                                    <td className="py-2 px-3">{(v.tags || []).join(", ") || "-"}</td>
+                                    <td className="py-2 px-3">
+                                      <div className="flex gap-2 flex-wrap">
+                                        <SmallButton onClick={() => addLibraryVendorToCurrent(v)}>+ Add</SmallButton>
+                                        <SmallButton tone="danger" onClick={() => removeVendorFromLibrary(v.id)}>
+                                          Delete
+                                        </SmallButton>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div className="text-xs text-neutral-600">
+                          Tip: “Auto-pick 3” uses category + tags (if you enter them) to shortlist vendors.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <SmallButton onClick={addVendor}>+ Vendor</SmallButton>
+                    <div className="text-xs text-neutral-600">Add at least 3 vendors for compliance.</div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {vendors.map((v, idx) => (
+                      <div key={v.id} className="rounded-2xl border border-neutral-200 bg-white">
+                        <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between gap-2 flex-wrap">
+                          <div className="font-semibold text-neutral-800">Vendor {idx + 1}</div>
+                          <div className="flex gap-2 flex-wrap">
+                            <SmallButton
+                              onClick={() =>
+                                addVendorToLibrary({
+                                  name: v.name,
+                                  email: v.email,
+                                  phone: v.phone,
+                                  website: v.website,
+                                  notes: v.notes,
+                                  tags: parseTags(v.tags),
+                                  category: v.category || effectiveFinderCategory || "",
+                                  city: v.city || vendorFinder.city || "",
+                                })
+                              }
+                              disabled={!norm(v.name)}
+                              title={!norm(v.name) ? "Add a vendor name first" : "Save this vendor to your library"}
+                            >
+                              Save to library
+                            </SmallButton>
+
+                            <SmallButton
+                              tone="danger"
+                              onClick={() => deleteVendor(v.id)}
+                              disabled={vendors.length <= 1}
+                              title={vendors.length <= 1 ? "Keep at least one vendor" : "Delete vendor"}
+                            >
+                              Delete
+                            </SmallButton>
+                          </div>
+                        </div>
+
+                        <div className="p-4 space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">Name *</label>
+                              <input
+                                className={inputBase}
+                                value={v.name}
+                                onChange={(e) => updateVendor(v.id, { name: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">Email</label>
+                              <input
+                                className={inputBase}
+                                value={v.email}
+                                onChange={(e) => updateVendor(v.id, { email: e.target.value })}
+                                placeholder="quotes@vendor.de"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">Phone</label>
+                              <input
+                                className={inputBase}
+                                value={v.phone}
+                                onChange={(e) => updateVendor(v.id, { phone: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">Website</label>
+                              <input
+                                className={inputBase}
+                                value={v.website}
+                                onChange={(e) => updateVendor(v.id, { website: e.target.value })}
+                                placeholder="https://"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">City (optional)</label>
+                              <input
+                                className={inputBase}
+                                value={v.city || ""}
+                                onChange={(e) => updateVendor(v.id, { city: e.target.value })}
+                                placeholder={vendorFinder.city || "e.g., München"}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-neutral-700 font-medium">Tags (optional)</label>
+                              <input
+                                className={inputBase}
+                                value={v.tags || ""}
+                                onChange={(e) => updateVendor(v.id, { tags: e.target.value })}
+                                placeholder="local, approved, fast"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-sm text-neutral-700 font-medium">Notes</label>
+                            <input
+                              className={inputBase}
+                              value={v.notes}
+                              onChange={(e) => updateVendor(v.id, { notes: e.target.value })}
+                              placeholder="e.g., preferred / fast / local"
+                            />
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
+              ) : null}
 
-                <div className="text-xs text-neutral-500">
-                  Tip: If something looks “missing”, it’s usually a different browser/profile/device. Import your last export.
+              {/* STEP 3: RFQs */}
+              {step === 2 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm text-neutral-700 font-medium">Subject prefix</label>
+                      <input
+                        className={inputBase}
+                        value={state.rfq.subjectPrefix}
+                        onChange={(e) => updateRFQ({ subjectPrefix: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-neutral-700 font-medium">Greeting</label>
+                      <input
+                        className={inputBase}
+                        value={state.rfq.greeting}
+                        onChange={(e) => updateRFQ({ greeting: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-neutral-700 font-medium">Closing</label>
+                      <input
+                        className={inputBase}
+                        value={state.rfq.closing}
+                        onChange={(e) => updateRFQ({ closing: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-neutral-700 font-medium">Signature name (optional)</label>
+                      <input
+                        className={inputBase}
+                        value={state.rfq.signatureName}
+                        onChange={(e) => updateRFQ({ signatureName: e.target.value })}
+                        placeholder="If profile user is blank"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-sm text-neutral-700 font-medium">Payment line</label>
+                      <input
+                        className={inputBase}
+                        value={state.rfq.paymentLine}
+                        onChange={(e) => updateRFQ({ paymentLine: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-sm">
+                    {[
+                      ["leadTime", "Lead time"],
+                      ["validity", "Validity"],
+                      ["delivery", "Delivery"],
+                      ["payment", "Payment terms"],
+                    ].map(([k, label]) => (
+                      <label
+                        key={k}
+                        className="flex items-center gap-2 bg-white border border-neutral-200 rounded-full px-3 py-2"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!state.rfq.include?.[k]}
+                          onChange={(e) =>
+                            updateRFQ({ include: { ...(state.rfq.include || {}), [k]: e.target.checked } })
+                          }
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="space-y-3">
+                    {vendors
+                      .filter((v) => String(v.name || "").trim())
+                      .map((v) => {
+                        const t = rfqTextByVendor.get(v.id);
+                        const subject = t?.subject || "";
+                        const body = t?.body || "";
+                        const canMail = isEmail(v.email);
+
+                        return (
+                          <div key={v.id} className="rounded-2xl border border-neutral-200 bg-white">
+                            <div className="px-4 py-3 border-b border-neutral-100 flex items-start justify-between gap-3 flex-wrap">
+                              <div>
+                                <div className="font-semibold text-neutral-800">{v.name}</div>
+                                <div className="text-xs text-neutral-600 mt-1">{v.email || "No email"}</div>
+                              </div>
+                              <div className="flex gap-2 flex-wrap">
+                                <SmallButton onClick={() => copyText(subject)}>Copy subject</SmallButton>
+                                <SmallButton onClick={() => copyText(body)}>Copy body</SmallButton>
+                                <a
+                                  className={canMail ? btnPrimary : `${btnSecondary} pointer-events-none opacity-60`}
+                                  href={canMail ? buildMailto(v.email, subject, body) : undefined}
+                                >
+                                  Email (mailto)
+                                </a>
+                              </div>
+                            </div>
+
+                            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div className="rounded-2xl border border-neutral-200 p-3">
+                                <div className="text-xs text-neutral-600">Subject</div>
+                                <div className="text-sm text-neutral-800 break-words mt-1">{subject || "-"}</div>
+                              </div>
+                              <div className="rounded-2xl border border-neutral-200 p-3">
+                                <div className="text-xs text-neutral-600">Body (preview)</div>
+                                <pre className="text-xs whitespace-pre-wrap break-words mt-1 text-neutral-800">
+                                  {body || "-"}
+                                </pre>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
-              </div>
+              ) : null}
+
+              {/* STEP 4: Quotes */}
+              {step === 3 ? (
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    {vendors
+                      .filter((v) => String(v.name || "").trim())
+                      .map((v) => {
+                        const q = quotesByVendor.get(v.id) || {};
+                        return (
+                          <div key={v.id} className="rounded-2xl border border-neutral-200 bg-white">
+                            <div className="px-4 py-3 border-b border-neutral-100 flex items-start justify-between gap-3 flex-wrap">
+                              <div>
+                                <div className="font-semibold text-neutral-800">{v.name}</div>
+                                <div className="text-xs text-neutral-600 mt-1">{v.email || ""}</div>
+                              </div>
+                              <div className="text-xs text-neutral-600">
+                                Amount:{" "}
+                                <span className="font-semibold text-neutral-800">
+                                  {q.amount ? moneyFmt(q.amount) : "-"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="p-4 space-y-3">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-sm text-neutral-700 font-medium">Total amount</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    className={inputBase}
+                                    value={q.amount ?? ""}
+                                    onChange={(e) => upsertQuote(v.id, { amount: e.target.value })}
+                                    placeholder="e.g., 199.99"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-neutral-700 font-medium">Lead time</label>
+                                  <input
+                                    className={inputBase}
+                                    value={q.leadTime ?? ""}
+                                    onChange={(e) => upsertQuote(v.id, { leadTime: e.target.value })}
+                                    placeholder="e.g., 3–5 business days"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-neutral-700 font-medium">Validity</label>
+                                  <input
+                                    className={inputBase}
+                                    value={q.validity ?? ""}
+                                    onChange={(e) => upsertQuote(v.id, { validity: e.target.value })}
+                                    placeholder="e.g., valid 14 days"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-neutral-700 font-medium">Proof reference</label>
+                                  <input
+                                    className={inputBase}
+                                    value={q.proof ?? ""}
+                                    onChange={(e) => upsertQuote(v.id, { proof: e.target.value })}
+                                    placeholder="e.g., email 24.12 / PDF filename"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="text-sm text-neutral-700 font-medium">Notes</label>
+                                <input
+                                  className={inputBase}
+                                  value={q.notes ?? ""}
+                                  onChange={(e) => upsertQuote(v.id, { notes: e.target.value })}
+                                  placeholder="Any special terms / observations"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  <div className="rounded-2xl border border-neutral-200 bg-white">
+                    <div className="px-4 py-3 border-b border-neutral-100">
+                      <div className="font-semibold text-neutral-800">Comparison (auto-sorted by amount)</div>
+                      <div className="text-xs text-neutral-600 mt-1">Select the winning vendor here.</div>
+                    </div>
+                    <div className="p-4 overflow-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-neutral-600">
+                          <tr className="border-b">
+                            <th className="py-2 pr-2">Select</th>
+                            <th className="py-2 pr-2">Vendor</th>
+                            <th className="py-2 pr-2">Amount</th>
+                            <th className="py-2 pr-2">Lead time</th>
+                            <th className="py-2 pr-2">Validity</th>
+                            <th className="py-2 pr-2">Proof</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {quoteRows.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="py-3 text-neutral-500">
+                                Add vendor names first.
+                              </td>
+                            </tr>
+                          ) : (
+                            quoteRows.map((r) => (
+                              <tr key={r.vendorId} className="border-b last:border-b-0">
+                                <td className="py-2 pr-2">
+                                  <input
+                                    type="radio"
+                                    name="selectedVendor"
+                                    checked={state.compliance.selectedVendorId === r.vendorId}
+                                    onChange={() => selectVendor(r.vendorId)}
+                                  />
+                                </td>
+                                <td className="py-2 pr-2 font-medium">{r.vendorName}</td>
+                                <td className="py-2 pr-2">{r.amount === null ? "-" : moneyFmt(r.amount)}</td>
+                                <td className="py-2 pr-2">{r.leadTime || "-"}</td>
+                                <td className="py-2 pr-2">{r.validity || "-"}</td>
+                                <td className="py-2 pr-2">{r.proof || "-"}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* STEP 5: Pack */}
+              {step === 4 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="rounded-2xl border border-neutral-200 p-4">
+                      <div className="font-semibold text-neutral-800">Selected vendor</div>
+                      <div className="mt-2 text-sm text-neutral-800">
+                        {state.compliance.selectedVendorId
+                          ? vendors.find((v) => v.id === state.compliance.selectedVendorId)?.name || "-"
+                          : "Not selected"}
+                      </div>
+                      <div className="mt-2 text-xs text-neutral-600">
+                        Tip: select vendor in the Quotes comparison table.
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-neutral-200 p-4">
+                      <div className="font-semibold text-neutral-800">Compliance checklist</div>
+                      <ul className="mt-2 text-sm text-neutral-700 list-disc pl-5 space-y-1">
+                        <li>Request documented (title + specification)</li>
+                        <li>At least 3 vendors contacted</li>
+                        <li>At least 3 quotes recorded</li>
+                        <li>Selection justified</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-neutral-700 font-medium">Justification (why selected vendor)</label>
+                    <textarea
+                      className={`${inputBase} min-h-[140px]`}
+                      value={state.compliance.justification}
+                      onChange={(e) =>
+                        setState((prev) =>
+                          saveState({
+                            ...prev,
+                            compliance: { ...prev.compliance, justification: e.target.value },
+                          })
+                        )
+                      }
+                      placeholder="e.g., lowest total cost, fastest delivery, compliant spec, best warranty..."
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <SmallButton onClick={() => setStep(3)}>Back to quotes</SmallButton>
+                    <SmallButton tone="primary" onClick={() => setPreviewOpen(true)}>
+                      Open preview
+                    </SmallButton>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Footer link (match Inspect-It) */}
-        <div className="mt-6 text-sm text-neutral-600">
+        {/* Footer link */}
+        <div className="mt-6 text-sm text-neutral-600 print:hidden">
           <a className="underline hover:text-neutral-900" href={HUB_URL} target="_blank" rel="noreferrer">
             Return to ToolStack hub
           </a>
