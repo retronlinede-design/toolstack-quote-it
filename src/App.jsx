@@ -996,9 +996,9 @@ export default function App() {
           <div>
             <div className="text-4xl sm:text-5xl font-black tracking-tight text-neutral-700">
               <span>Quote</span>
-              <span className="text-lime-500">It</span>
+              <span className="text-[#D5FF00]">It</span>
             </div>
-            <div className="text-sm text-neutral-700">RFQs (mailto), vendor library, quote comparison, print-ready pack.</div>
+            <div className="text-sm text-neutral-700">Make procurement easy with the 3 quote system</div>
             <div className="mt-3 h-[2px] w-80 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
             <div className="mt-3 flex flex-wrap gap-2">
               <Pill tone="accent">{vendorCount} vendors</Pill>
