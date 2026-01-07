@@ -1,9 +1,11 @@
-// Quote-It (ToolStack) — module-ready MVP
-// Styled to match ToolStack Master UI (Check-It master)
-// Paste into: src/App.jsx
-// Requires: Tailwind v4 configured (same as other ToolStack apps).
+import React, { useEffect, useMemo, useState } from "react";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+/**
+ * ToolStack — Quote-It — module-ready MVP
+ * Apply Netto-It Master UI (accent + buttons + inputs + help icon + print-from-preview)
+ * Paste into: src/App.jsx
+ * Requires: Tailwind v4 configured.
+ */
 
 const APP_ID = "quoteit";
 const APP_VERSION = "v1";
@@ -19,6 +21,9 @@ const VENDOR_LIBRARY_KEY = "toolstack.quoteit.vendorLibrary.v1";
 
 // Optional: set later
 const HUB_URL = "https://YOUR-WIX-HUB-URL-HERE";
+
+// Netto-It master accent
+const ACCENT = "#D5FF00";
 
 // ✅ Same style of id helper as Budgit (prevents crypto issues on some builds)
 const uid = (prefix = "id") => {
@@ -269,39 +274,24 @@ const pickThreeFromLibrary = ({ library, category, requiredTags = [] }) => {
   return scored.slice(0, 3).map((x) => x.v);
 };
 
-// -------------------- ToolStack Master UI (Check-It master) --------------------
-const btnSecondary =
-  "print:hidden px-3 py-2 rounded-xl text-sm font-medium border border-neutral-200 bg-white shadow-sm hover:bg-neutral-50 active:translate-y-[1px] transition disabled:opacity-50 disabled:cursor-not-allowed";
-const btnPrimary =
-  "print:hidden px-3 py-2 rounded-xl text-sm font-medium border border-neutral-700 bg-neutral-700 text-white shadow-sm hover:bg-neutral-600 active:translate-y-[1px] transition disabled:opacity-50 disabled:cursor-not-allowed";
-const btnDanger =
-  "print:hidden px-3 py-2 rounded-xl text-sm font-medium border border-red-200 bg-red-50 text-red-700 shadow-sm hover:bg-red-100 active:translate-y-[1px] transition disabled:opacity-50 disabled:cursor-not-allowed";
-const inputBase =
-  "mt-2 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400/25 focus:border-neutral-300";
+// -------------------- ToolStack UI (Netto-It master) --------------------
 const card = "rounded-2xl bg-white border border-neutral-200 shadow-sm";
 const cardHead = "px-4 py-3 border-b border-neutral-100";
 const cardPad = "p-4";
 
-function SmallButton({ children, onClick, tone = "default", disabled, title, className = "" }) {
-  const cls = tone === "primary" ? btnPrimary : tone === "danger" ? btnDanger : btnSecondary;
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} title={title} className={`${cls} ${className}`}>
-      {children}
-    </button>
-  );
-}
+const inputBase =
+  "mt-2 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ts-accent-rgb)/0.25)] focus:border-[var(--ts-accent)]";
 
-/** Normalized Top Actions (mobile-aligned “table/grid”) */
 const ACTION_BASE =
   "print:hidden h-10 w-full rounded-xl text-sm font-medium border transition shadow-sm active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center";
 
 function ActionButton({ children, onClick, tone = "default", disabled, title }) {
   const cls =
     tone === "primary"
-      ? "bg-neutral-700 hover:bg-neutral-600 text-white border-neutral-700"
+      ? "bg-neutral-700 text-white border-neutral-700 hover:ring-2 hover:ring-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)]"
       : tone === "danger"
-        ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-        : "bg-white hover:bg-neutral-50 text-neutral-700 border-neutral-200";
+        ? "bg-red-50 text-red-700 border-red-200 hover:bg-[rgb(var(--ts-accent-rgb)/0.15)] hover:border-[var(--ts-accent)]"
+        : "bg-white text-neutral-700 border-neutral-200 hover:bg-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)]";
 
   return (
     <button type="button" onClick={onClick} disabled={disabled} title={title} className={`${ACTION_BASE} ${cls}`}>
@@ -313,8 +303,8 @@ function ActionButton({ children, onClick, tone = "default", disabled, title }) 
 function ActionFileButton({ children, onFile, accept = "application/json", tone = "primary", title }) {
   const cls =
     tone === "primary"
-      ? "bg-neutral-700 hover:bg-neutral-600 text-white border-neutral-700"
-      : "bg-white hover:bg-neutral-50 text-neutral-700 border-neutral-200";
+      ? "bg-neutral-700 text-white border-neutral-700 hover:ring-2 hover:ring-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)]"
+      : "bg-white text-neutral-700 border-neutral-200 hover:bg-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)]";
 
   return (
     <label title={title} className={`${ACTION_BASE} ${cls} cursor-pointer`}>
@@ -329,10 +319,26 @@ function ActionFileButton({ children, onFile, accept = "application/json", tone 
   );
 }
 
+const btnSecondary =
+  "print:hidden px-3 py-2 rounded-xl text-sm font-medium border border-neutral-200 bg-white shadow-sm hover:bg-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)] active:translate-y-[1px] transition disabled:opacity-50 disabled:cursor-not-allowed text-neutral-800";
+const btnPrimary =
+  "print:hidden px-3 py-2 rounded-xl text-sm font-medium border border-neutral-700 bg-neutral-700 text-white shadow-sm hover:ring-2 hover:ring-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)] active:translate-y-[1px] transition disabled:opacity-50 disabled:cursor-not-allowed";
+const btnDanger =
+  "print:hidden px-3 py-2 rounded-xl text-sm font-medium border border-red-200 bg-red-50 text-red-700 shadow-sm hover:bg-[rgb(var(--ts-accent-rgb)/0.15)] hover:border-[var(--ts-accent)] active:translate-y-[1px] transition disabled:opacity-50 disabled:cursor-not-allowed";
+
+function SmallButton({ children, onClick, tone = "default", disabled, title, className = "" }) {
+  const cls = tone === "primary" ? btnPrimary : tone === "danger" ? btnDanger : btnSecondary;
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} title={title} className={`${cls} ${className}`}>
+      {children}
+    </button>
+  );
+}
+
 function Pill({ children, tone = "default" }) {
   const cls =
     tone === "accent"
-      ? "border-lime-200 bg-lime-50 text-neutral-800"
+      ? "border-[rgb(var(--ts-accent-rgb)/0.55)] bg-[rgb(var(--ts-accent-rgb)/0.18)] text-neutral-800"
       : tone === "warn"
         ? "border-amber-200 bg-amber-50 text-neutral-800"
         : "border-neutral-200 bg-white text-neutral-800";
@@ -344,7 +350,27 @@ function Pill({ children, tone = "default" }) {
   );
 }
 
-// Help Pack v1 (modal) — match Check-It master
+function StepPill({ label, active, done, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`print:hidden px-3 py-2 rounded-xl text-sm font-medium border shadow-sm transition ${
+        active
+          ? "border-neutral-700 bg-neutral-700 text-white hover:ring-2 hover:ring-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)]"
+          : "border-neutral-200 bg-white hover:bg-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)] text-neutral-800"
+      }`}
+      title={done ? "Done" : ""}
+    >
+      <span className="inline-flex items-center gap-2">
+        <span>{label}</span>
+        {done ? <span className="text-xs opacity-90">✓</span> : null}
+      </span>
+    </button>
+  );
+}
+
+// Help Pack (modal) — pinned ? icon only
 function HelpModal({ open, onClose }) {
   if (!open) return null;
 
@@ -356,20 +382,16 @@ function HelpModal({ open, onClose }) {
           <div>
             <div className="text-lg font-semibold text-neutral-800">Help</div>
             <div className="text-sm text-neutral-700 mt-1">How saving works in ToolStack apps.</div>
-            <div className="mt-3 h-[2px] w-52 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
+            <div className="mt-3 h-[2px] w-52 rounded-full bg-[var(--ts-accent)]" />
           </div>
-          <button
-            type="button"
-            className="px-3 py-2 rounded-xl text-sm font-medium border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 transition"
-            onClick={onClose}
-          >
+          <button type="button" className={btnSecondary} onClick={onClose}>
             Close
           </button>
         </div>
 
         <div className="p-4 space-y-4 text-sm text-neutral-700">
           <div className="rounded-2xl border border-neutral-200 p-4">
-            <div className="font-semibold text-neutral-800">Autosave (default)</div>
+            <div className="font-semibold text-neutral-800">Autosave</div>
             <p className="mt-1 text-neutral-700">
               Your data saves automatically in this browser on this device (localStorage). If you clear browser data or
               switch devices, it won’t follow automatically.
@@ -377,57 +399,29 @@ function HelpModal({ open, onClose }) {
           </div>
 
           <div className="rounded-2xl border border-neutral-200 p-4">
-            <div className="font-semibold text-neutral-800">Export (backup / move devices)</div>
+            <div className="font-semibold text-neutral-800">Export</div>
             <p className="mt-1 text-neutral-700">
-              Use <span className="font-medium">Export</span> to download a JSON backup file. Save it somewhere safe
-              (Drive/Dropbox/email to yourself).
+              Use <span className="font-medium">Export</span> to download a JSON backup file. Save it somewhere safe.
             </p>
           </div>
 
           <div className="rounded-2xl border border-neutral-200 p-4">
-            <div className="font-semibold text-neutral-800">Import (restore)</div>
+            <div className="font-semibold text-neutral-800">Import</div>
             <p className="mt-1 text-neutral-700">
               Use <span className="font-medium">Import</span> to load a previous JSON backup and continue.
             </p>
           </div>
 
-          <div className="text-xs text-neutral-600">
-            Tip: Export once a week (or after big updates) so you always have a clean backup.
-          </div>
+          <div className="text-xs text-neutral-600">Tip: Export once a week (or after big updates).</div>
         </div>
 
         <div className="p-4 border-t border-neutral-100 flex items-center justify-end">
-          <button
-            type="button"
-            className="px-3 py-2 rounded-xl text-sm font-medium border border-neutral-700 bg-neutral-700 text-white hover:bg-neutral-600 transition"
-            onClick={onClose}
-          >
+          <button type="button" className={btnPrimary} onClick={onClose}>
             Got it
           </button>
         </div>
       </div>
     </div>
-  );
-}
-
-// Step pill (styled like master)
-function StepPill({ label, active, done, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`print:hidden px-3 py-2 rounded-xl text-sm font-medium border shadow-sm transition ${
-        active
-          ? "border-neutral-700 bg-neutral-700 text-white hover:bg-neutral-600"
-          : "border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800"
-      }`}
-      title={done ? "Done" : ""}
-    >
-      <span className="inline-flex items-center gap-2">
-        <span>{label}</span>
-        {done ? <span className="text-xs opacity-90">✓</span> : null}
-      </span>
-    </button>
   );
 }
 
@@ -607,9 +601,7 @@ export default function App() {
   }
 
   function selectVendor(vendorId) {
-    setState((prev) =>
-      saveState({ ...prev, compliance: { ...prev.compliance, selectedVendorId: vendorId } })
-    );
+    setState((prev) => saveState({ ...prev, compliance: { ...prev.compliance, selectedVendorId: vendorId } }));
   }
 
   async function copyText(text) {
@@ -649,21 +641,21 @@ export default function App() {
     reader.readAsText(file);
   }
 
-  function printPreview() {
-    setPreviewOpen(true);
-    setTimeout(() => window.print(), 50);
+  function openHub() {
+    try {
+      if (!HUB_URL || HUB_URL.includes("YOUR-WIX-HUB-URL")) {
+        alert("Set HUB_URL first (top of the file).");
+        return;
+      }
+      window.open(HUB_URL, "_blank", "noopener,noreferrer");
+    } catch {
+      // ignore
+    }
   }
 
-  const moduleManifest = useMemo(
-    () => ({
-      id: APP_ID,
-      name: "Quote-It",
-      version: APP_VERSION,
-      storageKeys: [KEY, PROFILE_KEY, VENDOR_LIBRARY_KEY],
-      exports: ["print", "json"],
-    }),
-    []
-  );
+  function modulePrint() {
+    setTimeout(() => window.print(), 50);
+  }
 
   const rfqTextByVendor = useMemo(() => {
     const out = new Map();
@@ -806,9 +798,10 @@ export default function App() {
   }, [vendorLibrary, vendorLibSearch]);
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-800">
+    <div className="min-h-screen bg-neutral-50 text-neutral-800" style={{ ["--ts-accent"]: ACCENT, ["--ts-accent-rgb"]: "213 255 0" }}>
       {/* Print rules */}
       <style>{`
+        :root{ --ts-accent:${ACCENT}; --ts-accent-rgb:213 255 0; }
         @media print { .print\\:hidden { display: none !important; } }
       `}</style>
 
@@ -830,9 +823,12 @@ export default function App() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setPreviewOpen(false)} />
           <div className="relative w-full max-w-5xl">
             <div className="mb-3 rounded-2xl bg-white border border-neutral-200 shadow-sm p-3 flex items-center justify-between gap-3">
-              <div className="text-lg font-semibold text-neutral-800">Print preview</div>
+              <div>
+                <div className="text-lg font-semibold text-neutral-800">Print preview</div>
+                <div className="mt-2 h-[2px] w-48 rounded-full bg-[var(--ts-accent)]" />
+              </div>
               <div className="flex items-center gap-2">
-                <button className={btnSecondary} onClick={() => window.print()}>
+                <button className={btnSecondary} onClick={modulePrint}>
                   Print / Save PDF
                 </button>
                 <button className={btnPrimary} onClick={() => setPreviewOpen(false)}>
@@ -851,7 +847,7 @@ export default function App() {
                     <div className="text-sm text-neutral-700">
                       Reference: {state.request.reference || "-"} • Date: {isoToday()}
                     </div>
-                    <div className="mt-3 h-[2px] w-72 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
+                    <div className="mt-3 h-[2px] w-72 rounded-full bg-[var(--ts-accent)]" />
                   </div>
                   <div className="text-sm text-neutral-700">Generated: {new Date().toLocaleString()}</div>
                 </div>
@@ -859,9 +855,7 @@ export default function App() {
                 <div className="mt-5 space-y-5 text-sm">
                   <div className="rounded-2xl border border-neutral-200 p-4">
                     <div className="font-semibold text-neutral-800">Prepared by</div>
-                    <div className="mt-1 text-neutral-700">
-                      {profile.user || state.rfq.signatureName || "-"}
-                    </div>
+                    <div className="mt-1 text-neutral-700">{profile.user || state.rfq.signatureName || "-"}</div>
                   </div>
 
                   <div className="rounded-2xl border border-neutral-200 p-4">
@@ -946,9 +940,7 @@ export default function App() {
                           ) : (
                             quoteRows.map((r) => (
                               <tr key={r.vendorId} className="border-b last:border-b-0">
-                                <td className="py-2 pr-2">
-                                  {state.compliance.selectedVendorId === r.vendorId ? "✓" : ""}
-                                </td>
+                                <td className="py-2 pr-2">{state.compliance.selectedVendorId === r.vendorId ? "✓" : ""}</td>
                                 <td className="py-2 pr-2 font-medium">{r.vendorName}</td>
                                 <td className="py-2 pr-2">{r.amount === null ? "-" : moneyFmt(r.amount)}</td>
                                 <td className="py-2 pr-2">{r.leadTime || "-"}</td>
@@ -964,9 +956,7 @@ export default function App() {
 
                   <div className="rounded-2xl border border-neutral-200 p-4">
                     <div className="font-semibold text-neutral-800">Justification</div>
-                    <div className="text-neutral-700 whitespace-pre-wrap mt-1">
-                      {state.compliance.justification || "-"}
-                    </div>
+                    <div className="text-neutral-700 whitespace-pre-wrap mt-1">{state.compliance.justification || "-"}</div>
                   </div>
 
                   <div className="mt-2 grid grid-cols-2 gap-6 text-sm">
@@ -994,12 +984,13 @@ export default function App() {
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="text-4xl sm:text-5xl font-black tracking-tight text-neutral-700">
+            <div className="text-4xl sm:text-5xl font-black tracking-tight text-neutral-800">
               <span>Quote</span>
-              <span className="text-[#D5FF00]">It</span>
+              <span style={{ color: ACCENT }}>It</span>
             </div>
             <div className="text-sm text-neutral-700">Make procurement easy with the 3 quote system</div>
-            <div className="mt-3 h-[2px] w-80 rounded-full bg-gradient-to-r from-lime-400/0 via-lime-400 to-emerald-400/0" />
+            <div className="mt-3 h-[2px] w-80 rounded-full bg-[var(--ts-accent)]" />
+
             <div className="mt-3 flex flex-wrap gap-2">
               <Pill tone="accent">{vendorCount} vendors</Pill>
               <Pill>{emailCount} emails</Pill>
@@ -1016,14 +1007,12 @@ export default function App() {
             </div>
           </div>
 
-          {/* Normalized top actions (grid “table”) + pinned Help icon */}
+          {/* Normalized top actions + pinned Help icon */}
           <div className="w-full sm:w-[680px]">
             <div className="relative">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 pr-12">
-                <ActionButton onClick={() => setPreviewOpen(true)} disabled={false}>
-                  Preview
-                </ActionButton>
-                <ActionButton onClick={printPreview}>Print / Save PDF</ActionButton>
+                <ActionButton onClick={openHub} title="Return to ToolStack hub">Hub</ActionButton>
+                <ActionButton onClick={() => setPreviewOpen(true)}>Preview</ActionButton>
                 <ActionButton onClick={exportJSON}>Export</ActionButton>
                 <ActionFileButton onFile={(f) => importJSON(f)} tone="primary" title="Import JSON backup">
                   Import
@@ -1034,7 +1023,7 @@ export default function App() {
                 type="button"
                 title="Help"
                 onClick={() => setHelpOpen(true)}
-                className="print:hidden absolute right-0 top-0 h-10 w-10 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 shadow-sm flex items-center justify-center font-bold text-neutral-800"
+                className="print:hidden absolute right-0 top-0 h-10 w-10 rounded-xl border border-neutral-200 bg-white hover:bg-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)] shadow-sm flex items-center justify-center font-black text-neutral-800"
                 aria-label="Help"
               >
                 ?
@@ -1048,33 +1037,21 @@ export default function App() {
           {/* Profile */}
           <div className={card}>
             <div className={cardHead}>
-              <div className="font-semibold text-neutral-800">Profile (shared)</div>
+              <div className="font-semibold text-neutral-800">Profile</div>
               <div className="text-xs text-neutral-600 mt-1">Stored at {PROFILE_KEY}</div>
             </div>
             <div className={`${cardPad} space-y-3`}>
               <div>
                 <label className="text-sm text-neutral-700 font-medium">Organization</label>
-                <input
-                  className={inputBase}
-                  value={profile.org}
-                  onChange={(e) => setProfile({ ...profile, org: e.target.value })}
-                />
+                <input className={inputBase} value={profile.org} onChange={(e) => setProfile({ ...profile, org: e.target.value })} />
               </div>
               <div>
                 <label className="text-sm text-neutral-700 font-medium">User</label>
-                <input
-                  className={inputBase}
-                  value={profile.user}
-                  onChange={(e) => setProfile({ ...profile, user: e.target.value })}
-                />
+                <input className={inputBase} value={profile.user} onChange={(e) => setProfile({ ...profile, user: e.target.value })} />
               </div>
               <div>
                 <label className="text-sm text-neutral-700 font-medium">Language</label>
-                <select
-                  className={inputBase}
-                  value={profile.language}
-                  onChange={(e) => setProfile({ ...profile, language: e.target.value })}
-                >
+                <select className={inputBase} value={profile.language} onChange={(e) => setProfile({ ...profile, language: e.target.value })}>
                   <option value="EN">EN</option>
                   <option value="DE">DE</option>
                 </select>
@@ -1115,11 +1092,7 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="text-sm text-neutral-700 font-medium">Title *</label>
-                      <input
-                        className={inputBase}
-                        value={state.request.title}
-                        onChange={(e) => updateRequest({ title: e.target.value })}
-                      />
+                      <input className={inputBase} value={state.request.title} onChange={(e) => updateRequest({ title: e.target.value })} />
                     </div>
                     <div>
                       <label className="text-sm text-neutral-700 font-medium">Category</label>
@@ -1141,12 +1114,7 @@ export default function App() {
                     </div>
                     <div>
                       <label className="text-sm text-neutral-700 font-medium">Needed by</label>
-                      <input
-                        type="date"
-                        className={inputBase}
-                        value={state.request.neededBy}
-                        onChange={(e) => updateRequest({ neededBy: e.target.value })}
-                      />
+                      <input type="date" className={inputBase} value={state.request.neededBy} onChange={(e) => updateRequest({ neededBy: e.target.value })} />
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-sm text-neutral-700 font-medium">Delivery to</label>
@@ -1189,10 +1157,8 @@ export default function App() {
                     <div className="rounded-2xl border border-neutral-200 bg-white">
                       <div className="px-4 py-3 border-b border-neutral-100 flex items-start justify-between gap-3 flex-wrap">
                         <div>
-                          <div className="font-semibold text-neutral-800">Vendor Finder (Germany)</div>
-                          <div className="text-xs text-neutral-600 mt-1">
-                            One-click searches → quick add → (optional) save to your library.
-                          </div>
+                          <div className="font-semibold text-neutral-800">Vendor Finder</div>
+                          <div className="text-xs text-neutral-600 mt-1">One-click searches → quick add → optional save to your library.</div>
                         </div>
                         <SmallButton onClick={autoPick3VendorsFromLibrary} title="Pick 3 best matches from your saved library">
                           Auto-pick 3
@@ -1211,7 +1177,7 @@ export default function App() {
                             />
                           </div>
                           <div>
-                            <label className="text-sm text-neutral-700 font-medium">Category (optional)</label>
+                            <label className="text-sm text-neutral-700 font-medium">Category</label>
                             <input
                               className={inputBase}
                               value={vendorFinder.category}
@@ -1220,9 +1186,7 @@ export default function App() {
                             />
                           </div>
                           <div className="md:col-span-2">
-                            <label className="text-sm text-neutral-700 font-medium">
-                              Required tags (optional, comma-separated)
-                            </label>
+                            <label className="text-sm text-neutral-700 font-medium">Required tags (comma-separated)</label>
                             <input
                               className={inputBase}
                               value={vendorFinder.requiredTags}
@@ -1265,9 +1229,7 @@ export default function App() {
                               <input
                                 className={inputBase}
                                 value={vendorFinder.quick.name}
-                                onChange={(e) =>
-                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, name: e.target.value } }))
-                                }
+                                onChange={(e) => setVendorFinder((p) => ({ ...p, quick: { ...p.quick, name: e.target.value } }))}
                               />
                             </div>
                             <div>
@@ -1275,9 +1237,7 @@ export default function App() {
                               <input
                                 className={inputBase}
                                 value={vendorFinder.quick.email}
-                                onChange={(e) =>
-                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, email: e.target.value } }))
-                                }
+                                onChange={(e) => setVendorFinder((p) => ({ ...p, quick: { ...p.quick, email: e.target.value } }))}
                                 placeholder="quotes@vendor.de"
                               />
                             </div>
@@ -1286,9 +1246,7 @@ export default function App() {
                               <input
                                 className={inputBase}
                                 value={vendorFinder.quick.phone}
-                                onChange={(e) =>
-                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, phone: e.target.value } }))
-                                }
+                                onChange={(e) => setVendorFinder((p) => ({ ...p, quick: { ...p.quick, phone: e.target.value } }))}
                               />
                             </div>
                             <div>
@@ -1296,9 +1254,7 @@ export default function App() {
                               <input
                                 className={inputBase}
                                 value={vendorFinder.quick.website}
-                                onChange={(e) =>
-                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, website: e.target.value } }))
-                                }
+                                onChange={(e) => setVendorFinder((p) => ({ ...p, quick: { ...p.quick, website: e.target.value } }))}
                                 placeholder="https://"
                               />
                             </div>
@@ -1307,9 +1263,7 @@ export default function App() {
                               <input
                                 className={inputBase}
                                 value={vendorFinder.quick.tags}
-                                onChange={(e) =>
-                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, tags: e.target.value } }))
-                                }
+                                onChange={(e) => setVendorFinder((p) => ({ ...p, quick: { ...p.quick, tags: e.target.value } }))}
                                 placeholder="local, approved, fast"
                               />
                             </div>
@@ -1318,9 +1272,7 @@ export default function App() {
                               <input
                                 className={inputBase}
                                 value={vendorFinder.quick.notes}
-                                onChange={(e) =>
-                                  setVendorFinder((p) => ({ ...p, quick: { ...p.quick, notes: e.target.value } }))
-                                }
+                                onChange={(e) => setVendorFinder((p) => ({ ...p, quick: { ...p.quick, notes: e.target.value } }))}
                                 placeholder="Any helpful notes"
                               />
                             </div>
@@ -1336,11 +1288,7 @@ export default function App() {
                               <span>Save to library</span>
                             </label>
 
-                            <SmallButton
-                              tone="primary"
-                              onClick={addQuickVendor}
-                              disabled={!norm(vendorFinder.quick.name)}
-                            >
+                            <SmallButton tone="primary" onClick={addQuickVendor} disabled={!norm(vendorFinder.quick.name)}>
                               + Add vendor
                             </SmallButton>
                           </div>
@@ -1414,9 +1362,7 @@ export default function App() {
                           </table>
                         </div>
 
-                        <div className="text-xs text-neutral-600">
-                          Tip: “Auto-pick 3” uses category + tags (if you enter them) to shortlist vendors.
-                        </div>
+                        <div className="text-xs text-neutral-600">Tip: “Auto-pick 3” uses category + tags to shortlist vendors.</div>
                       </div>
                     </div>
                   </div>
@@ -1466,11 +1412,7 @@ export default function App() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
                               <label className="text-sm text-neutral-700 font-medium">Name *</label>
-                              <input
-                                className={inputBase}
-                                value={v.name}
-                                onChange={(e) => updateVendor(v.id, { name: e.target.value })}
-                              />
+                              <input className={inputBase} value={v.name} onChange={(e) => updateVendor(v.id, { name: e.target.value })} />
                             </div>
                             <div>
                               <label className="text-sm text-neutral-700 font-medium">Email</label>
@@ -1483,11 +1425,7 @@ export default function App() {
                             </div>
                             <div>
                               <label className="text-sm text-neutral-700 font-medium">Phone</label>
-                              <input
-                                className={inputBase}
-                                value={v.phone}
-                                onChange={(e) => updateVendor(v.id, { phone: e.target.value })}
-                              />
+                              <input className={inputBase} value={v.phone} onChange={(e) => updateVendor(v.id, { phone: e.target.value })} />
                             </div>
                             <div>
                               <label className="text-sm text-neutral-700 font-medium">Website</label>
@@ -1499,7 +1437,7 @@ export default function App() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-neutral-700 font-medium">City (optional)</label>
+                              <label className="text-sm text-neutral-700 font-medium">City</label>
                               <input
                                 className={inputBase}
                                 value={v.city || ""}
@@ -1508,7 +1446,7 @@ export default function App() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-neutral-700 font-medium">Tags (optional)</label>
+                              <label className="text-sm text-neutral-700 font-medium">Tags</label>
                               <input
                                 className={inputBase}
                                 value={v.tags || ""}
@@ -1540,30 +1478,18 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="text-sm text-neutral-700 font-medium">Subject prefix</label>
-                      <input
-                        className={inputBase}
-                        value={state.rfq.subjectPrefix}
-                        onChange={(e) => updateRFQ({ subjectPrefix: e.target.value })}
-                      />
+                      <input className={inputBase} value={state.rfq.subjectPrefix} onChange={(e) => updateRFQ({ subjectPrefix: e.target.value })} />
                     </div>
                     <div>
                       <label className="text-sm text-neutral-700 font-medium">Greeting</label>
-                      <input
-                        className={inputBase}
-                        value={state.rfq.greeting}
-                        onChange={(e) => updateRFQ({ greeting: e.target.value })}
-                      />
+                      <input className={inputBase} value={state.rfq.greeting} onChange={(e) => updateRFQ({ greeting: e.target.value })} />
                     </div>
                     <div>
                       <label className="text-sm text-neutral-700 font-medium">Closing</label>
-                      <input
-                        className={inputBase}
-                        value={state.rfq.closing}
-                        onChange={(e) => updateRFQ({ closing: e.target.value })}
-                      />
+                      <input className={inputBase} value={state.rfq.closing} onChange={(e) => updateRFQ({ closing: e.target.value })} />
                     </div>
                     <div>
-                      <label className="text-sm text-neutral-700 font-medium">Signature name (optional)</label>
+                      <label className="text-sm text-neutral-700 font-medium">Signature name</label>
                       <input
                         className={inputBase}
                         value={state.rfq.signatureName}
@@ -1573,11 +1499,7 @@ export default function App() {
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-sm text-neutral-700 font-medium">Payment line</label>
-                      <input
-                        className={inputBase}
-                        value={state.rfq.paymentLine}
-                        onChange={(e) => updateRFQ({ paymentLine: e.target.value })}
-                      />
+                      <input className={inputBase} value={state.rfq.paymentLine} onChange={(e) => updateRFQ({ paymentLine: e.target.value })} />
                     </div>
                   </div>
 
@@ -1588,16 +1510,11 @@ export default function App() {
                       ["delivery", "Delivery"],
                       ["payment", "Payment terms"],
                     ].map(([k, label]) => (
-                      <label
-                        key={k}
-                        className="flex items-center gap-2 bg-white border border-neutral-200 rounded-full px-3 py-2"
-                      >
+                      <label key={k} className="flex items-center gap-2 bg-white border border-neutral-200 rounded-full px-3 py-2">
                         <input
                           type="checkbox"
                           checked={!!state.rfq.include?.[k]}
-                          onChange={(e) =>
-                            updateRFQ({ include: { ...(state.rfq.include || {}), [k]: e.target.checked } })
-                          }
+                          onChange={(e) => updateRFQ({ include: { ...(state.rfq.include || {}), [k]: e.target.checked } })}
                         />
                         <span>{label}</span>
                       </label>
@@ -1623,10 +1540,7 @@ export default function App() {
                               <div className="flex gap-2 flex-wrap">
                                 <SmallButton onClick={() => copyText(subject)}>Copy subject</SmallButton>
                                 <SmallButton onClick={() => copyText(body)}>Copy body</SmallButton>
-                                <a
-                                  className={canMail ? btnPrimary : `${btnSecondary} pointer-events-none opacity-60`}
-                                  href={canMail ? buildMailto(v.email, subject, body) : undefined}
-                                >
+                                <a className={canMail ? btnPrimary : `${btnSecondary} pointer-events-none opacity-60`} href={canMail ? buildMailto(v.email, subject, body) : undefined}>
                                   Email (mailto)
                                 </a>
                               </div>
@@ -1639,9 +1553,7 @@ export default function App() {
                               </div>
                               <div className="rounded-2xl border border-neutral-200 p-3">
                                 <div className="text-xs text-neutral-600">Body (preview)</div>
-                                <pre className="text-xs whitespace-pre-wrap break-words mt-1 text-neutral-800">
-                                  {body || "-"}
-                                </pre>
+                                <pre className="text-xs whitespace-pre-wrap break-words mt-1 text-neutral-800">{body || "-"}</pre>
                               </div>
                             </div>
                           </div>
@@ -1667,10 +1579,7 @@ export default function App() {
                                 <div className="text-xs text-neutral-600 mt-1">{v.email || ""}</div>
                               </div>
                               <div className="text-xs text-neutral-600">
-                                Amount:{" "}
-                                <span className="font-semibold text-neutral-800">
-                                  {q.amount ? moneyFmt(q.amount) : "-"}
-                                </span>
+                                Amount: <span className="font-semibold text-neutral-800">{q.amount ? moneyFmt(q.amount) : "-"}</span>
                               </div>
                             </div>
 
@@ -1678,52 +1587,25 @@ export default function App() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
                                   <label className="text-sm text-neutral-700 font-medium">Total amount</label>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    className={inputBase}
-                                    value={q.amount ?? ""}
-                                    onChange={(e) => upsertQuote(v.id, { amount: e.target.value })}
-                                    placeholder="e.g., 199.99"
-                                  />
+                                  <input type="number" step="0.01" className={inputBase} value={q.amount ?? ""} onChange={(e) => upsertQuote(v.id, { amount: e.target.value })} placeholder="e.g., 199.99" />
                                 </div>
                                 <div>
                                   <label className="text-sm text-neutral-700 font-medium">Lead time</label>
-                                  <input
-                                    className={inputBase}
-                                    value={q.leadTime ?? ""}
-                                    onChange={(e) => upsertQuote(v.id, { leadTime: e.target.value })}
-                                    placeholder="e.g., 3–5 business days"
-                                  />
+                                  <input className={inputBase} value={q.leadTime ?? ""} onChange={(e) => upsertQuote(v.id, { leadTime: e.target.value })} placeholder="e.g., 3–5 business days" />
                                 </div>
                                 <div>
                                   <label className="text-sm text-neutral-700 font-medium">Validity</label>
-                                  <input
-                                    className={inputBase}
-                                    value={q.validity ?? ""}
-                                    onChange={(e) => upsertQuote(v.id, { validity: e.target.value })}
-                                    placeholder="e.g., valid 14 days"
-                                  />
+                                  <input className={inputBase} value={q.validity ?? ""} onChange={(e) => upsertQuote(v.id, { validity: e.target.value })} placeholder="e.g., valid 14 days" />
                                 </div>
                                 <div>
                                   <label className="text-sm text-neutral-700 font-medium">Proof reference</label>
-                                  <input
-                                    className={inputBase}
-                                    value={q.proof ?? ""}
-                                    onChange={(e) => upsertQuote(v.id, { proof: e.target.value })}
-                                    placeholder="e.g., email 24.12 / PDF filename"
-                                  />
+                                  <input className={inputBase} value={q.proof ?? ""} onChange={(e) => upsertQuote(v.id, { proof: e.target.value })} placeholder="e.g., email 24.12 / PDF filename" />
                                 </div>
                               </div>
 
                               <div>
                                 <label className="text-sm text-neutral-700 font-medium">Notes</label>
-                                <input
-                                  className={inputBase}
-                                  value={q.notes ?? ""}
-                                  onChange={(e) => upsertQuote(v.id, { notes: e.target.value })}
-                                  placeholder="Any special terms / observations"
-                                />
+                                <input className={inputBase} value={q.notes ?? ""} onChange={(e) => upsertQuote(v.id, { notes: e.target.value })} placeholder="Any special terms / observations" />
                               </div>
                             </div>
                           </div>
@@ -1733,8 +1615,8 @@ export default function App() {
 
                   <div className="rounded-2xl border border-neutral-200 bg-white">
                     <div className="px-4 py-3 border-b border-neutral-100">
-                      <div className="font-semibold text-neutral-800">Comparison (auto-sorted by amount)</div>
-                      <div className="text-xs text-neutral-600 mt-1">Select the winning vendor here.</div>
+                      <div className="font-semibold text-neutral-800">Comparison</div>
+                      <div className="text-xs text-neutral-600 mt-1">Auto-sorted by amount. Select the winning vendor here.</div>
                     </div>
                     <div className="p-4 overflow-auto">
                       <table className="w-full text-sm">
@@ -1751,20 +1633,13 @@ export default function App() {
                         <tbody>
                           {quoteRows.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="py-3 text-neutral-500">
-                                Add vendor names first.
-                              </td>
+                              <td colSpan={6} className="py-3 text-neutral-500">Add vendor names first.</td>
                             </tr>
                           ) : (
                             quoteRows.map((r) => (
                               <tr key={r.vendorId} className="border-b last:border-b-0">
                                 <td className="py-2 pr-2">
-                                  <input
-                                    type="radio"
-                                    name="selectedVendor"
-                                    checked={state.compliance.selectedVendorId === r.vendorId}
-                                    onChange={() => selectVendor(r.vendorId)}
-                                  />
+                                  <input type="radio" name="selectedVendor" checked={state.compliance.selectedVendorId === r.vendorId} onChange={() => selectVendor(r.vendorId)} />
                                 </td>
                                 <td className="py-2 pr-2 font-medium">{r.vendorName}</td>
                                 <td className="py-2 pr-2">{r.amount === null ? "-" : moneyFmt(r.amount)}</td>
@@ -1792,9 +1667,7 @@ export default function App() {
                           ? vendors.find((v) => v.id === state.compliance.selectedVendorId)?.name || "-"
                           : "Not selected"}
                       </div>
-                      <div className="mt-2 text-xs text-neutral-600">
-                        Tip: select vendor in the Quotes comparison table.
-                      </div>
+                      <div className="mt-2 text-xs text-neutral-600">Tip: select vendor in the Quotes comparison table.</div>
                     </div>
 
                     <div className="rounded-2xl border border-neutral-200 p-4">
@@ -1809,7 +1682,7 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="text-sm text-neutral-700 font-medium">Justification (why selected vendor)</label>
+                    <label className="text-sm text-neutral-700 font-medium">Justification</label>
                     <textarea
                       className={`${inputBase} min-h-[140px]`}
                       value={state.compliance.justification}
