@@ -285,7 +285,7 @@ const inputBase =
 const ACTION_BASE =
   "print:hidden h-10 w-full rounded-xl text-sm font-medium border transition shadow-sm active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center";
 
-function ActionButton({ children, onClick, tone = "default", disabled, title }) {
+function ActionButton({ children, onClick, tone = "default", disabled, title, className = "" }) {
   const cls =
     tone === "primary"
       ? "bg-neutral-700 text-white border-neutral-700 hover:ring-2 hover:ring-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)]"
@@ -294,20 +294,20 @@ function ActionButton({ children, onClick, tone = "default", disabled, title }) 
         : "bg-white text-neutral-700 border-neutral-200 hover:bg-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)]";
 
   return (
-    <button type="button" onClick={onClick} disabled={disabled} title={title} className={`${ACTION_BASE} ${cls}`}>
+    <button type="button" onClick={onClick} disabled={disabled} title={title} className={`${ACTION_BASE} ${cls} ${className}`}>
       {children}
     </button>
   );
 }
 
-function ActionFileButton({ children, onFile, accept = "application/json", tone = "primary", title }) {
+function ActionFileButton({ children, onFile, accept = "application/json", tone = "primary", title, className = "" }) {
   const cls =
     tone === "primary"
       ? "bg-neutral-700 text-white border-neutral-700 hover:ring-2 hover:ring-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)]"
       : "bg-white text-neutral-700 border-neutral-200 hover:bg-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)]";
 
   return (
-    <label title={title} className={`${ACTION_BASE} ${cls} cursor-pointer`}>
+    <label title={title} className={`${ACTION_BASE} ${cls} ${className} cursor-pointer`}>
       <span>{children}</span>
       <input
         type="file"
@@ -1011,10 +1011,10 @@ export default function App() {
           <div className="w-full sm:w-[680px]">
             <div className="relative">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 pr-12">
-                <ActionButton onClick={openHub} title="Return to ToolStack hub">Hub</ActionButton>
-                <ActionButton onClick={() => setPreviewOpen(true)}>Preview</ActionButton>
-                <ActionButton onClick={exportJSON}>Export</ActionButton>
-                <ActionFileButton onFile={(f) => importJSON(f)} tone="primary" title="Import JSON backup">
+                <ActionButton className="text-base sm:text-lg" onClick={openHub} title="Return to ToolStack hub">Hub</ActionButton>
+                <ActionButton className="text-base sm:text-lg" onClick={() => setPreviewOpen(true)}>Preview</ActionButton>
+                <ActionButton className="text-base sm:text-lg" onClick={exportJSON}>Export</ActionButton>
+                <ActionFileButton className="text-base sm:text-lg" onFile={(f) => importJSON(f)} tone="primary" title="Import JSON backup">
                   Import
                 </ActionFileButton>
               </div>
