@@ -803,6 +803,23 @@ export default function App() {
       <style>{`
         :root{ --ts-accent:${ACCENT}; --ts-accent-rgb:213 255 0; }
         @media print { .print\\:hidden { display: none !important; } }
+
+        /* Subtle scrollbar for horizontal steps row */
+        .steps-scrollbar {
+          -ms-overflow-style: none; /* IE/Edge */
+          scrollbar-width: thin; /* Firefox */
+          scrollbar-color: rgba(0,0,0,0.08) transparent;
+        }
+        .steps-scrollbar::-webkit-scrollbar {
+          height: 8px;
+        }
+        .steps-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .steps-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(0,0,0,0.08);
+          border-radius: 9999px;
+        }
       `}</style>
 
       {previewOpen ? (
@@ -998,7 +1015,7 @@ export default function App() {
               {stepDone.packOk ? <Pill tone="accent">Pack ready</Pill> : <Pill>In progress</Pill>}
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex gap-2 overflow-x-auto whitespace-nowrap steps-scrollbar">
               <StepPill label="1. Request" active={step === 0} done={stepDone.requestOk} onClick={() => setStep(0)} />
               <StepPill label="2. Vendors" active={step === 1} done={stepDone.vendorsOk} onClick={() => setStep(1)} />
               <StepPill label="3. RFQs" active={step === 2} done={stepDone.rfqOk} onClick={() => setStep(2)} />
@@ -1011,10 +1028,10 @@ export default function App() {
           <div className="w-full sm:w-[680px]">
             <div className="relative">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 pr-12">
-                <ActionButton className="text-base sm:text-lg" onClick={openHub} title="Return to ToolStack hub">Hub</ActionButton>
-                <ActionButton className="text-base sm:text-lg" onClick={() => setPreviewOpen(true)}>Preview</ActionButton>
-                <ActionButton className="text-base sm:text-lg" onClick={exportJSON}>Export</ActionButton>
-                <ActionFileButton className="text-base sm:text-lg" onFile={(f) => importJSON(f)} tone="primary" title="Import JSON backup">
+                <ActionButton onClick={openHub} title="Return to ToolStack hub">Hub</ActionButton>
+                <ActionButton onClick={() => setPreviewOpen(true)}>Preview</ActionButton>
+                <ActionButton onClick={exportJSON}>Export</ActionButton>
+                <ActionFileButton onFile={(f) => importJSON(f)} tone="primary" title="Import JSON backup">
                   Import
                 </ActionFileButton>
               </div>
