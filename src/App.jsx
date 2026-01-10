@@ -1,4 +1,23 @@
 import React, { useEffect, useMemo, useState } from "react";
+import {
+  uid,
+  safeParse,
+  isoToday,
+  isEmail,
+  toNumberOrNull,
+  moneyFmt,
+  buildMailto,
+  buildRFQSubject,
+  buildRFQBody,
+  norm,
+  parseTags,
+  uniqBy,
+  vendorKey,
+  buildVendorSearchTermsDE,
+  googleDE,
+  googleMapsDE,
+  pickThreeFromLibrary,
+} from "./lib/utils";
 
 /**
  * ToolStack — Quote-It — module-ready MVP
@@ -25,254 +44,7 @@ const HUB_URL = "https://YOUR-WIX-HUB-URL-HERE";
 // Netto-It master accent
 const ACCENT = "#D5FF00";
 
-// ✅ Same style of id helper as Budgit (prevents crypto issues on some builds)
-const uid = (prefix = "id") => {
-  try {
-    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  } catch {
-    // ignore
-  }
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-function safeParse(raw, fallback) {
-  try {
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function isoToday() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function loadProfile() {
-  return (
-    safeParse(localStorage.getItem(PROFILE_KEY), null) || {
-      org: "ToolStack",
-      user: "",
-      language: "EN",
-      logo: "",
-    }
-  );
-}
-
-function defaultState() {
-  const mkVendor = () => ({
-    id: uid("v"),
-    name: "",
-    email: "",
-    phone: "",
-    website: "",
-    notes: "",
-    tags: "", // comma-separated (optional)
-    category: "",
-    city: "",
-    country: "DE",
-  });
-
-  return {
-    meta: { appId: APP_ID, version: APP_VERSION, updatedAt: new Date().toISOString() },
-    ui: { step: 0 },
-    request: {
-      title: "",
-      category: "",
-      reference: "",
-      neededBy: "",
-      deliveryTo: "",
-      spec: "",
-      notes: "",
-    },
-    vendors: [mkVendor(), mkVendor(), mkVendor()],
-    rfq: {
-      subjectPrefix: "RFQ",
-      greeting: "Dear",
-      closing: "Kind regards",
-      include: {
-        leadTime: true,
-        validity: true,
-        delivery: true,
-        payment: true,
-      },
-      paymentLine: "Please include payment terms.",
-      signatureName: "",
-    },
-    quotes: [],
-    compliance: {
-      selectedVendorId: "",
-      justification: "",
-    },
-  };
-}
-
-function loadState() {
-  return safeParse(localStorage.getItem(KEY), null) || defaultState();
-}
-
-// NOTE: do NOT write to localStorage here (prevents double-save loops)
-function saveState(state) {
-  return {
-    ...state,
-    meta: { ...state.meta, updatedAt: new Date().toISOString() },
-  };
-}
-
-function isEmail(s) {
-  return /.+@.+\..+/.test(String(s || "").trim());
-}
-
-function toNumberOrNull(v) {
-  if (v === "" || v === null || v === undefined) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
-function moneyFmt(n) {
-  if (n === null || n === undefined) return "-";
-  const x = Number(n);
-  if (!Number.isFinite(x)) return "-";
-  return x.toFixed(2);
-}
-
-function buildMailto(email, subject, body) {
-  const s = encodeURIComponent(subject || "");
-  const b = encodeURIComponent(body || "");
-  return `mailto:${encodeURIComponent(email || "")}?subject=${s}&body=${b}`;
-}
-
-function buildRFQSubject({ rfq, request, vendor }) {
-  const bits = [];
-  bits.push(rfq.subjectPrefix || "RFQ");
-  if (request.reference) bits.push(request.reference);
-  if (request.title) bits.push(request.title);
-  if (vendor?.name) bits.push(`(${vendor.name})`);
-  return bits.join(" - ").trim();
-}
-
-function buildRFQBody({ profile, rfq, request, vendor }) {
-  const lines = [];
-  const greetingName = vendor?.name ? `${rfq.greeting} ${vendor.name},` : `${rfq.greeting} Sir/Madam,`;
-  lines.push(greetingName);
-  lines.push("");
-
-  lines.push("Please provide a quotation for the following request:");
-  lines.push("");
-  if (request.title) lines.push(`Title: ${request.title}`);
-  if (request.category) lines.push(`Category: ${request.category}`);
-  if (request.reference) lines.push(`Reference: ${request.reference}`);
-  if (request.neededBy) lines.push(`Needed by: ${request.neededBy}`);
-  if (request.deliveryTo) lines.push(`Delivery to: ${request.deliveryTo}`);
-  lines.push("");
-
-  if (request.spec) {
-    lines.push("Specification / items:");
-    lines.push(request.spec);
-    lines.push("");
-  }
-
-  if (request.notes) {
-    lines.push("Notes:");
-    lines.push(request.notes);
-    lines.push("");
-  }
-
-  lines.push("Please include in your quote:");
-  const inc = rfq.include || {};
-  if (inc.leadTime) lines.push("- Lead time / delivery timeframe");
-  if (inc.validity) lines.push("- Quote validity period");
-  if (inc.delivery) lines.push("- Delivery charges (if any)");
-  if (inc.payment) lines.push(`- ${rfq.paymentLine || "Payment terms"}`);
-  lines.push("");
-
-  lines.push(rfq.closing || "Kind regards");
-  lines.push(profile?.user || rfq.signatureName || "");
-  if (profile?.org) lines.push(profile.org);
-
-  return lines.filter((l) => l !== undefined).join("\n");
-}
-
-// ---- Vendor Finder + Library (Germany-only helpers) ----
-const norm = (s) => (s || "").toString().trim();
-const parseTags = (s) =>
-  norm(s)
-    .split(",")
-    .map((x) => norm(x))
-    .filter(Boolean);
-
-const uniqBy = (arr, keyFn) => {
-  const seen = new Set();
-  const out = [];
-  for (const x of arr) {
-    const k = keyFn(x);
-    if (!k || seen.has(k)) continue;
-    seen.add(k);
-    out.push(x);
-  }
-  return out;
-};
-
-const loadVendorLibrary = () => {
-  try {
-    const raw = localStorage.getItem(VENDOR_LIBRARY_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveVendorLibrary = (list) => {
-  try {
-    localStorage.setItem(VENDOR_LIBRARY_KEY, JSON.stringify(list));
-  } catch {
-    // ignore
-  }
-};
-
-const vendorKey = (v) => {
-  const email = norm(v.email).toLowerCase();
-  const web = norm(v.website).toLowerCase().replace(/^https?:\/\//, "");
-  return email || web || norm(v.name).toLowerCase();
-};
-
-const buildVendorSearchTermsDE = ({ request, category, city }) => {
-  const title = norm(request?.title);
-  const spec = norm(request?.spec || request?.description);
-  const where = norm(city) || "Deutschland";
-  const cat = norm(category);
-
-  const base = [title, spec].filter(Boolean).join(" ").trim();
-  const catBit = cat ? cat : "";
-
-  const q1 = [base, catBit, where, "Angebot", "Lieferzeit", "E-Mail"].filter(Boolean).join(" ");
-  const q2 = [base, catBit, where, "Händler", "Kontakt", "Ansprechpartner"].filter(Boolean).join(" ");
-  const q3 = [base, where, "Firma", "E-Mail", "Telefon"].filter(Boolean).join(" ");
-
-  return uniqBy([q1, q2, q3].map((x) => norm(x)).filter(Boolean), (x) => x);
-};
-
-const googleDE = (q) => `https://www.google.de/search?q=${encodeURIComponent(q)}`;
-const googleMapsDE = (q) => `https://www.google.de/maps/search/${encodeURIComponent(q)}`;
-
-const pickThreeFromLibrary = ({ library, category, requiredTags = [] }) => {
-  const cat = norm(category).toLowerCase();
-  const tags = requiredTags.map((t) => norm(t).toLowerCase()).filter(Boolean);
-
-  const scored = library.map((v) => {
-    const vCat = norm(v.category).toLowerCase();
-    const vTags = (v.tags || []).map((t) => norm(t).toLowerCase());
-    let score = 0;
-    if (cat && vCat === cat) score += 3;
-    for (const t of tags) if (vTags.includes(t)) score += 2;
-    if (norm(v.email)) score += 1;
-    if (norm(v.website)) score += 1;
-    return { v, score };
-  });
-
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 3).map((x) => x.v);
-};
+/* Helpers extracted to src/lib/utils.js */
 
 // -------------------- ToolStack UI (Netto-It master) --------------------
 const card = "rounded-2xl bg-white border border-neutral-200 shadow-sm";
