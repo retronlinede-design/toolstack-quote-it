@@ -46,6 +46,95 @@ const ACCENT = "#D5FF00";
 
 /* Helpers extracted to src/lib/utils.js */
 
+function loadProfile() {
+  return (
+    safeParse(localStorage.getItem(PROFILE_KEY), null) || {
+      org: "ToolStack",
+      user: "",
+      language: "EN",
+      logo: "",
+    }
+  );
+}
+
+function defaultState() {
+  const mkVendor = () => ({
+    id: uid("v"),
+    name: "",
+    email: "",
+    phone: "",
+    website: "",
+    notes: "",
+    tags: "", // comma-separated (optional)
+    category: "",
+    city: "",
+    country: "DE",
+  });
+
+  return {
+    meta: { appId: APP_ID, version: APP_VERSION, updatedAt: new Date().toISOString() },
+    ui: { step: 0 },
+    request: {
+      title: "",
+      category: "",
+      reference: "",
+      neededBy: "",
+      deliveryTo: "",
+      spec: "",
+      notes: "",
+    },
+    vendors: [mkVendor(), mkVendor(), mkVendor()],
+    rfq: {
+      subjectPrefix: "RFQ",
+      greeting: "Dear",
+      closing: "Kind regards",
+      include: {
+        leadTime: true,
+        validity: true,
+        delivery: true,
+        payment: true,
+      },
+      paymentLine: "Please include payment terms.",
+      signatureName: "",
+    },
+    quotes: [],
+    compliance: {
+      selectedVendorId: "",
+      justification: "",
+    },
+  };
+}
+
+function loadState() {
+  return safeParse(localStorage.getItem(KEY), null) || defaultState();
+}
+
+// NOTE: do NOT write to localStorage here (prevents double-save loops)
+function saveState(state) {
+  return {
+    ...state,
+    meta: { ...state.meta, updatedAt: new Date().toISOString() },
+  };
+}
+
+const loadVendorLibrary = () => {
+  try {
+    const raw = localStorage.getItem(VENDOR_LIBRARY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveVendorLibrary = (list) => {
+  try {
+    localStorage.setItem(VENDOR_LIBRARY_KEY, JSON.stringify(list));
+  } catch {
+    // ignore
+  }
+};
+
 // -------------------- ToolStack UI (Netto-It master) --------------------
 const card = "rounded-2xl bg-white border border-neutral-200 shadow-sm";
 const cardHead = "px-4 py-3 border-b border-neutral-100";
