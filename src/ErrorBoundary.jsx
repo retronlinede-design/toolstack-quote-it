@@ -30,7 +30,7 @@ export default class ErrorBoundary extends React.Component {
             </details>
             <div className="mt-4 flex gap-2">
               <button className="px-3 py-2 rounded-xl bg-neutral-700 text-white" onClick={this.reset}>Retry</button>
-              <button className="px-3 py-2 rounded-xl border" onClick={() => window.open('about:blank', '_blank')}>Open console</button>
+              <button className="px-3 py-2 rounded-xl border" onClick={() => window.location.reload()}>Reload Page</button>
             </div>
           </div>
         </div>
