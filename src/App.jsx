@@ -39,6 +39,9 @@ const PROFILE_KEY = "toolstack.profile.v1";
 // Vendor Library key (cross-procurement)
 const VENDOR_LIBRARY_KEY = "toolstack.quoteit.vendorLibrary.v1";
 
+// RFQ Templates key
+const RFQ_TEMPLATES_KEY = "toolstack.quoteit.rfqTemplates.v1";
+
 // TODO: Replace with your actual Wix Hub URL or internal dashboard link
 const HUB_URL = "https://YOUR-WIX-HUB-URL-HERE";
 
@@ -138,6 +141,21 @@ const saveVendorLibrary = (list) => {
   } catch {
     // ignore
   }
+};
+
+const loadTemplates = () => {
+  try {
+    const raw = localStorage.getItem(RFQ_TEMPLATES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveTemplates = (list) => {
+  try {
+    localStorage.setItem(RFQ_TEMPLATES_KEY, JSON.stringify(list));
+  } catch {}
 };
 
 // -------------------- ToolStack UI (Netto-It master) --------------------
@@ -583,6 +601,99 @@ function ManageVendorsModal({ open, onClose, vendors, quotes, onUpdate, onDelete
   );
 }
 
+function ManageTemplatesModal({ open, onClose, templates, onSave, onDelete, onImport }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [data, setData] = useState({ name: "", subject: "", body: "" });
+
+  useEffect(() => {
+    if (open && !selectedId && templates.length > 0) {
+      setSelectedId(templates[0].id);
+    } else if (open && templates.length === 0) {
+      setSelectedId("new");
+    }
+  }, [open, templates]);
+
+  useEffect(() => {
+    if (selectedId === "new") {
+      setData({ id: "new", name: "", subject: "", body: "" });
+    } else {
+      const t = templates.find((x) => x.id === selectedId);
+      if (t) setData({ ...t });
+    }
+  }, [selectedId, templates]);
+
+  if (!open) return null;
+
+  const handleChange = (field, val) => setData((p) => ({ ...p, [field]: val }));
+
+  const handleSave = () => {
+    if (!data.name) return alert("Template name is required");
+    onSave({ ...data, id: data.id === "new" ? uid("tpl") : data.id });
+    if (data.id === "new") {
+      alert("Template saved.");
+      setSelectedId("new");
+    } else {
+      alert("Template updated.");
+    }
+  };
+
+  const handleDelete = () => {
+    if (confirm("Delete this template?")) {
+      onDelete(data.id);
+      setSelectedId(templates.length > 1 ? templates.find((t) => t.id !== data.id)?.id : "new");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-4xl rounded-2xl bg-white border border-neutral-200 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
+          <div className="font-semibold text-neutral-800">Manage Email Templates</div>
+          <button type="button" className={btnSecondary} onClick={onClose}>Close</button>
+        </div>
+        <div className="flex-1 flex overflow-hidden">
+          <div className="w-1/3 border-r border-neutral-100 flex flex-col bg-neutral-50">
+            <div className="p-3 border-b border-neutral-100 flex gap-2">
+              <button className="w-full py-2 px-3 bg-white border border-neutral-200 rounded-lg text-sm font-medium hover:border-[var(--ts-accent)] shadow-sm" onClick={() => setSelectedId("new")}>+ New Template</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {templates.map((t) => (
+                <button key={t.id} onClick={() => setSelectedId(t.id)} className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate ${selectedId === t.id ? "bg-white shadow-sm ring-1 ring-neutral-200 font-medium" : "hover:bg-neutral-100 text-neutral-600"}`}>{t.name}</button>
+              ))}
+              {templates.length === 0 && <div className="p-4 text-center text-xs text-neutral-500">No templates.</div>}
+            </div>
+            <div className="p-3 border-t border-neutral-100">
+              <ActionFileButton onFile={onImport} title="Upload JSON templates" className="w-full">Upload Templates (JSON)</ActionFileButton>
+            </div>
+          </div>
+          <div className="w-2/3 flex flex-col bg-white">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="text-sm text-neutral-700 font-medium">Template Name</label>
+                <input className={inputBase} value={data.name} onChange={(e) => handleChange("name", e.target.value)} placeholder="e.g. Standard RFQ" />
+              </div>
+              <div>
+                <label className="text-sm text-neutral-700 font-medium">Subject</label>
+                <input className={inputBase} value={data.subject} onChange={(e) => handleChange("subject", e.target.value)} placeholder="Subject line..." />
+              </div>
+              <div>
+                <label className="text-sm text-neutral-700 font-medium">Body</label>
+                <textarea className={`${inputBase} min-h-[200px] font-mono`} value={data.body} onChange={(e) => handleChange("body", e.target.value)} placeholder="Email body..." />
+                <div className="mt-2 text-xs text-neutral-500">Available placeholders: {"{{vendor_name}}, {{vendor_email}}, {{title}}, {{spec}}, {{delivery_to}}, {{needed_by}}, {{my_name}}, {{my_org}}, {{reference}}"}</div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-neutral-100 flex justify-between bg-neutral-50">
+              {selectedId !== "new" ? <button type="button" className={btnDanger} onClick={handleDelete}>Delete</button> : <div />}
+              <button type="button" className={btnPrimary} onClick={handleSave}>Save Template</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const VendorSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -616,6 +727,8 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [manageVendorsOpen, setManageVendorsOpen] = useState(false);
   const [manageLibraryOpen, setManageLibraryOpen] = useState(false);
+  const [manageTemplatesOpen, setManageTemplatesOpen] = useState(false);
+  const [rfqTemplates, setRfqTemplates] = useState(() => loadTemplates());
   const [editingLibraryVendor, setEditingLibraryVendor] = useState(null);
   const [rfqLanguage, setRfqLanguage] = useState("EN");
   const [newQuoteAmount, setNewQuoteAmount] = useState("");
@@ -701,6 +814,12 @@ export default function App() {
     const t = setTimeout(() => saveVendorLibrary(vendorLibrary), 250);
     return () => clearTimeout(t);
   }, [vendorLibrary]);
+
+  // Persist templates
+  useEffect(() => {
+    const t = setTimeout(() => saveTemplates(rfqTemplates), 250);
+    return () => clearTimeout(t);
+  }, [rfqTemplates]);
 
   const steps = useMemo(
     () => [
@@ -806,6 +925,7 @@ export default function App() {
           validity: q.validity || "",
           paymentTerms: q.paymentTerms || "",
           proof: q.proof || "",
+          attachments: q.attachments || [],
           notes: q.notes || "",
           inactive: v.inactive,
         };
@@ -908,6 +1028,7 @@ export default function App() {
       validity: "",
       paymentTerms: "",
       proof: "",
+      attachments: [],
       notes: "",
       ...overrides,
     };
@@ -939,6 +1060,7 @@ export default function App() {
         leadTime: existing?.leadTime ?? "",
         validity: existing?.validity ?? "",
         proof: existing?.proof ?? "",
+        attachments: existing?.attachments ?? [],
         notes: existing?.notes ?? "",
         ...patch,
       };
@@ -1006,6 +1128,58 @@ export default function App() {
 
   function modulePrint() {
     setTimeout(() => window.print(), 50);
+  }
+
+  function importTemplates(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || ""));
+        if (Array.isArray(parsed)) {
+          setRfqTemplates((prev) => {
+            const newTpls = parsed.map((t) => ({ ...t, id: t.id || uid("tpl") }));
+            return [...prev, ...newTpls];
+          });
+          alert("Templates imported.");
+        } else {
+          throw new Error("Invalid format");
+        }
+      } catch (e) {
+        alert("Import failed: " + (e?.message || "unknown error"));
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function applyTemplateToVendor(vendorId, templateId) {
+    const t = rfqTemplates.find((x) => x.id === templateId);
+    if (!t) return;
+
+    const v = vendors.find((x) => x.id === vendorId);
+    if (!v) return;
+
+    let subject = t.subject || "";
+    let body = t.body || "";
+
+    const map = {
+      "{{vendor_name}}": v.name || "",
+      "{{vendor_email}}": v.email || "",
+      "{{title}}": state.request.title || "",
+      "{{spec}}": state.request.spec || "",
+      "{{delivery_to}}": state.request.deliveryTo || "",
+      "{{needed_by}}": state.request.neededBy || "",
+      "{{my_name}}": profile.user || "",
+      "{{my_org}}": profile.org || "",
+      "{{reference}}": state.request.reference || "",
+    };
+
+    for (const [k, val] of Object.entries(map)) {
+      subject = subject.replaceAll(k, val);
+      body = body.replaceAll(k, val);
+    }
+
+    updateVendor(vendorId, { rfqSubject: subject, rfqBody: body });
   }
 
   const rfqTextByVendor = useMemo(() => {
@@ -1279,6 +1453,14 @@ export default function App() {
         quotes={[]}
         onUpdate={updateLibraryVendor}
         onDelete={removeVendorFromLibrary}
+      />
+      <ManageTemplatesModal
+        open={manageTemplatesOpen}
+        onClose={() => setManageTemplatesOpen(false)}
+        templates={rfqTemplates}
+        onSave={(t) => setRfqTemplates((prev) => (t.id === "new" ? prev : prev.some((x) => x.id === t.id) ? prev.map((x) => (x.id === t.id ? t : x)) : [...prev, t]))}
+        onDelete={(id) => setRfqTemplates((prev) => prev.filter((x) => x.id !== id))}
+        onImport={importTemplates}
       />
 
       {/* Preview Modal */}
@@ -2043,6 +2225,7 @@ export default function App() {
                       Mark at least {requiredQuotes} vendor{requiredQuotes > 1 ? "s" : ""} as contacted to proceed. * Required
                     </div>
                     <div className="flex items-center gap-3">
+                    <SmallButton onClick={() => setManageTemplatesOpen(true)}>Manage Templates</SmallButton>
                     {rfqLanguage === "DE" && (
                       <button
                         type="button"
@@ -2124,8 +2307,10 @@ export default function App() {
                       .filter((v) => String(v.name || "").trim())
                       .map((v) => {
                         const t = rfqTextByVendor.get(v.id);
-                        const subject = t?.subject || "";
-                        const body = t?.body || "";
+                        const defaultSubject = t?.subject || "";
+                        const defaultBody = t?.body || "";
+                        const subject = v.rfqSubject !== undefined ? v.rfqSubject : defaultSubject;
+                        const body = v.rfqBody !== undefined ? v.rfqBody : defaultBody;
                         const canMail = isEmail(v.email);
 
                         return (
@@ -2149,6 +2334,15 @@ export default function App() {
                                 </select>
                                 <SmallButton onClick={() => copyText(subject)}>Copy subject</SmallButton>
                                 <SmallButton onClick={() => copyText(body)}>Copy body</SmallButton>
+                                {rfqTemplates.length > 0 && (
+                                  <select
+                                    className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ts-accent-rgb)/0.25)] focus:border-[var(--ts-accent)] max-w-[150px]"
+                                    onChange={(e) => { if(e.target.value) applyTemplateToVendor(v.id, e.target.value); e.target.value = ""; }}
+                                  >
+                                    <option value="">Apply Template...</option>
+                                    {rfqTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                  </select>
+                                )}
                                 <a
                                   className={canMail ? btnPrimary : `${btnSecondary} pointer-events-none opacity-60`}
                                   href={canMail ? buildMailto(v.email, subject, body) : undefined}
@@ -2156,18 +2350,31 @@ export default function App() {
                                 >
                                   Email (mailto)
                                 </a>
+                                {(v.rfqSubject !== undefined || v.rfqBody !== undefined) && (
+                                  <SmallButton onClick={() => updateVendor(v.id, { rfqSubject: undefined, rfqBody: undefined })} title="Reset to auto-generated text">
+                                    Reset text
+                                  </SmallButton>
+                                )}
                             </div>
 
-                            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div className="rounded-2xl border border-neutral-200 p-3">
-                                <div className="text-xs text-neutral-600">Subject</div>
-                                <div className="text-sm text-neutral-800 break-words mt-1">{subject || "-"}</div>
+                            <div className="p-4 space-y-3">
+                              <div>
+                                <label className="text-xs text-neutral-600 font-medium ml-1">Subject</label>
+                                <input
+                                  className={inputBase}
+                                  value={subject}
+                                  onChange={(e) => updateVendor(v.id, { rfqSubject: e.target.value })}
+                                />
                               </div>
-                              <div className="rounded-2xl border border-neutral-200 p-3">
-                                <div className="text-xs text-neutral-600">Body (preview)</div>
-                                <pre className="text-xs whitespace-pre-wrap break-words mt-1 text-neutral-800">{body || "-"}</pre>
-                              </div>
+                              <div>
+                                <label className="text-xs text-neutral-600 font-medium ml-1">Body</label>
+                                <textarea
+                                  className={`${inputBase} min-h-[200px] font-mono text-xs`}
+                                  value={body}
+                                  onChange={(e) => updateVendor(v.id, { rfqBody: e.target.value })}
+                                />
                             </div>
+                          </div>
                           </div>
                         );
                       })}
@@ -2310,25 +2517,51 @@ export default function App() {
                                 </div>
                                 <div>
                                   <label className="text-sm text-neutral-700 font-medium">Proof reference</label>
-                                  <div className="relative">
-                                    <input
-                                      className={`${inputBase} pr-8`}
-                                      value={r.proof}
-                                      onChange={(e) => upsertQuote(r.vendorId, { proof: e.target.value })}
-                                      placeholder="e.g., email 24.12 / PDF filename"
-                                    />
-                                    <label className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 hover:text-[var(--ts-accent)] p-1" title="Attach file">
-                                      📎
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-neutral-200 bg-white hover:bg-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)] cursor-pointer transition shadow-sm text-neutral-700">
+                                      <span>📎 Upload Docs</span>
                                       <input
                                         type="file"
                                         className="hidden"
+                                        multiple
                                         onChange={(e) => {
-                                          const f = e.target.files?.[0];
-                                          if (f) upsertQuote(r.vendorId, { proof: f.name });
+                                          const files = Array.from(e.target.files || []);
+                                          if (files.length > 0) {
+                                            const newFiles = files.map(f => f.name);
+                                            upsertQuote(r.vendorId, { attachments: [...(r.attachments || []), ...newFiles] });
+                                          }
+                                          e.target.value = "";
                                         }}
                                       />
                                     </label>
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-neutral-200 bg-white hover:bg-[rgb(var(--ts-accent-rgb)/0.25)] hover:border-[var(--ts-accent)] transition shadow-sm text-neutral-700"
+                                      onClick={() => window.open("https://translate.google.com/?op=docs", "_blank")}
+                                      title="Open Google Translate for Documents"
+                                    >
+                                      <span>文A Translate Docs</span>
+                                    </button>
                                   </div>
+                                  {r.attachments && r.attachments.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      {r.attachments.map((file, i) => (
+                                        <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-neutral-100 border border-neutral-200 text-xs text-neutral-700">
+                                          <span className="truncate max-w-[150px]" title={file}>{file}</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const next = r.attachments.filter((_, idx) => idx !== i);
+                                              upsertQuote(r.vendorId, { attachments: next });
+                                            }}
+                                            className="text-neutral-400 hover:text-red-600 ml-1"
+                                          >
+                                            ×
+                                          </button>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
@@ -2367,12 +2600,13 @@ export default function App() {
                             <th className="py-2 pr-2">Lead time</th>
                             <th className="py-2 pr-2">Validity</th>
                             <th className="py-2 pr-2">Payment Terms</th>
+                            <th className="py-2 pr-2">Proof</th>
                           </tr>
                         </thead>
                         <tbody>
                           {quoteRows.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="py-3 text-neutral-500">Add vendor names first.</td>
+                              <td colSpan={7} className="py-3 text-neutral-500">Add vendor names first.</td>
                             </tr>
                           ) : (
                             quoteRows.map((r) => (
@@ -2387,6 +2621,9 @@ export default function App() {
                                 <td className="py-2 pr-2">{r.leadTime || "-"}</td>
                                 <td className="py-2 pr-2">{r.validity || "-"}</td>
                                 <td className="py-2 pr-2">{r.paymentTerms || "-"}</td>
+                                <td className="py-2 pr-2">
+                                  {r.attachments && r.attachments.length > 0 ? <span className="text-green-600 font-bold" title="Proof uploaded">✓</span> : <span className="text-neutral-300">-</span>}
+                                </td>
                               </tr>
                             ))
                           )}
