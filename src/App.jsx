@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fromZodError } from "zod-validation-error";
 import { z } from "zod";
-import quoteItHeading from "./assets/Quoteit 1.png";
+import quoteItHeading from "./assets/quoteit-1.png";
 import {
   uid,
   safeParse,
