@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fromZodError } from "zod-validation-error";
 import { z } from "zod";
+import quoteItHeading from "./assets/Quoteit 1.png";
 import {
   uid,
   safeParse,
@@ -166,6 +167,27 @@ const cardPad = "p-4";
 const inputBase =
   "mt-2 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ts-accent-rgb)/0.25)] focus:border-[var(--ts-accent)]";
 
+// --- Modern Modal Styles ---
+const modalOverlay = "fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6";
+const modalBackdrop = "absolute inset-0 bg-black/50 backdrop-blur-sm";
+const modalContainer = "relative w-full rounded-2xl bg-neutral-900 border border-neutral-700 shadow-2xl overflow-hidden flex flex-col";
+const modalHeader = "p-4 bg-neutral-950/40 border-b border-neutral-700 flex items-center justify-between gap-4 shrink-0";
+const modalTitle = "text-lg font-semibold text-white flex items-center gap-3";
+const modalSubtitle = "text-sm text-neutral-400 mt-1";
+const modalCloseBtn = "text-neutral-400 hover:text-white transition p-1 rounded-lg hover:bg-neutral-800";
+const modalContent = "p-6 overflow-y-auto text-sm text-neutral-300 custom-scrollbar";
+const modalFooter = "p-4 border-t border-neutral-700 flex items-center justify-end gap-3 bg-neutral-900 shrink-0";
+
+const modalInput = "mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ts-accent-rgb)/0.5)] focus:border-[var(--ts-accent)] placeholder-neutral-500";
+const modalLabel = "text-sm text-neutral-400 font-medium";
+
+const modalBtnPrimary = "px-4 py-2 rounded-xl text-sm font-medium bg-neutral-700 text-white hover:bg-neutral-600 transition shadow-sm border border-transparent focus:ring-2 focus:ring-[var(--ts-accent)] focus:outline-none";
+const modalBtnSecondary = "px-4 py-2 rounded-xl text-sm font-medium border border-neutral-600 bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-500 transition shadow-sm focus:ring-2 focus:ring-[var(--ts-accent)] focus:outline-none";
+const modalBtnDanger = "px-4 py-2 rounded-xl text-sm font-medium border border-red-900/30 bg-red-900/20 text-red-400 hover:bg-red-900/30 transition shadow-sm focus:ring-2 focus:ring-red-500 focus:outline-none";
+
+const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+const ModalTag = ({ label }) => <span className="border border-[var(--ts-accent)] text-neutral-100 rounded-full px-2 py-0.5 text-xs font-medium tracking-wide uppercase">{label}</span>;
+
 const ACTION_BASE =
   "print:hidden h-10 w-full rounded-xl text-sm font-medium border transition shadow-sm active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center";
 
@@ -259,48 +281,152 @@ function HelpModal({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-2xl rounded-2xl bg-white border border-neutral-200 shadow-xl overflow-hidden">
-        <div className="p-4 border-b border-neutral-100 flex items-start justify-between gap-4">
+    <div className={modalOverlay}>
+      <div className={modalBackdrop} onClick={onClose} />
+      <div className={`${modalContainer} max-w-2xl max-h-[90vh]`}>
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ backgroundColor: ACCENT }} />
+        <div className={modalHeader}>
           <div>
-            <div className="text-lg font-semibold text-neutral-800">Help</div>
-            <div className="text-sm text-neutral-700 mt-1">How saving works in ToolStack apps.</div>
-            <div className="mt-3 h-[2px] w-52 rounded-full bg-[var(--ts-accent)]" />
+            <div className={modalTitle}>Help</div>
+            <div className={modalSubtitle}>About QuoteIt, data privacy, and how it works.</div>
           </div>
-          <button type="button" className={btnSecondary} onClick={onClose}>
-            Close
+          <button type="button" className={modalCloseBtn} onClick={onClose}>
+            <CloseIcon />
           </button>
         </div>
 
-        <div className="p-4 space-y-4 text-sm text-neutral-700">
-          <div className="rounded-2xl border border-neutral-200 p-4">
-            <div className="font-semibold text-neutral-800">Autosave</div>
-            <p className="mt-1 text-neutral-700">
-              Your data saves automatically in this browser on this device (localStorage). If you clear browser data or
-              switch devices, it won’t follow automatically.
+        <div className={modalContent}>
+          <div className="space-y-4">
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-800/50 p-4">
+            <div className="font-semibold text-white">1) About QuoteIt</div>
+            <p className="mt-1 text-neutral-300">
+              QuoteIt is a local-first procurement and quotation comparison tool designed to help you manage vendor
+              requests, record quotes, and generate structured comparison reports. It runs entirely in your browser with
+              no accounts, no cloud storage, and no automatic data sharing.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-neutral-200 p-4">
-            <div className="font-semibold text-neutral-800">Export</div>
-            <p className="mt-1 text-neutral-700">
-              Use <span className="font-medium">Export</span> to download a JSON backup file. Save it somewhere safe.
-            </p>
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-800/50 p-4">
+            <div className="font-semibold text-white">2) How QuoteIt Works</div>
+            <p className="mt-1 text-neutral-300">QuoteIt follows a structured workflow:</p>
+            <ol className="mt-2 list-decimal list-inside space-y-3">
+              <li>
+                <strong>Define the Requirement</strong>
+                <br />
+                Enter the project or purchase details.
+              </li>
+              <li>
+                <strong>Select or Add Vendors</strong>
+                <br />
+                Use the vendor library or manually add suppliers.
+              </li>
+              <li>
+                <strong>Send RFQs</strong>
+                <br />
+                Track contact method, dates, and responses.
+              </li>
+              <li>
+                <strong>Enter Quotes</strong>
+                <br />
+                Record pricing and key comparison data.
+              </li>
+              <li>
+                <strong>Compare & Select</strong>
+                <br />
+                Review structured comparison totals.
+              </li>
+              <li>
+                <strong>Preview & Print</strong>
+                <br />
+                Generate a clean, print-ready Three Quotes Pack.
+              </li>
+              <li>
+                <strong>Export a Backup</strong>
+                <br />
+                Export a JSON backup regularly, especially after major updates.
+              </li>
+            </ol>
           </div>
 
-          <div className="rounded-2xl border border-neutral-200 p-4">
-            <div className="font-semibold text-neutral-800">Import</div>
-            <p className="mt-1 text-neutral-700">
-              Use <span className="font-medium">Import</span> to load a previous JSON backup and continue.
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-800/50 p-4">
+            <div className="font-semibold text-white">3) Your Data & Privacy</div>
+            <p className="mt-1 text-neutral-300">
+              Your data is saved locally in this browser using secure local storage.
             </p>
+            <p className="mt-2 text-neutral-300">This means:</p>
+            <ul className="mt-2 list-disc list-inside space-y-1">
+              <li>Your data stays on this device</li>
+              <li>Clearing browser data can remove quote records</li>
+              <li>Incognito/private mode will not retain data</li>
+              <li>Data does not automatically sync across devices</li>
+            </ul>
           </div>
 
-          <div className="text-xs text-neutral-600">Tip: Export once a week (or after big updates).</div>
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-800/50 p-4">
+            <div className="font-semibold text-white">4) Backup & Restore</div>
+            <p className="mt-1 text-neutral-300">
+              <strong>Export</strong> downloads a JSON backup of your current QuoteIt data.
+            </p>
+            <p className="mt-2 text-neutral-300">
+              <strong>Import</strong> restores a previously exported JSON file and replaces current app data.
+            </p>
+            <p className="mt-2 text-neutral-300">Recommended routine:</p>
+            <ul className="mt-2 list-disc list-inside space-y-1">
+              <li>Export weekly</li>
+              <li>Export after major edits</li>
+              <li>Store backups in two locations (e.g., Downloads + Drive/USB)</li>
+            </ul>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-800/50 p-4">
+            <div className="font-semibold text-white">5) Buttons Explained</div>
+            <ul className="mt-2 space-y-2">
+              <li>
+                <strong>Preview</strong> – Opens the print-ready quotation pack.
+              </li>
+              <li>
+                <strong>Print / Save PDF</strong> – Prints only the preview sheet. Choose “Save as PDF” to create a file.
+              </li>
+              <li>
+                <strong>Export</strong> – Downloads a JSON backup file.
+              </li>
+              <li>
+                <strong>Import</strong> – Restores data from a JSON backup file.
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-800/50 p-4">
+            <div className="font-semibold text-white">6) Storage Keys (Advanced)</div>
+            <ul className="mt-2 space-y-1 font-mono text-xs text-neutral-400">
+              <li>App data key: <code>{KEY}</code></li>
+              <li>Shared profile key: <code>{PROFILE_KEY}</code></li>
+              <li>Vendor library key: <code>{VENDOR_LIBRARY_KEY}</code></li>
+              <li>RFQ templates key: <code>{RFQ_TEMPLATES_KEY}</code></li>
+            </ul>
+            <p className="mt-2 text-xs text-neutral-500">(If additional keys exist, list them without removing anything.)</p>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-800/50 p-4">
+            <div className="font-semibold text-white">7) Notes / Limitations</div>
+            <p className="mt-1 text-neutral-300">
+              QuoteIt is a procurement documentation tool. Financial totals depend on the accuracy of the entered
+              quotes.
+            </p>
+            <p className="mt-2 text-neutral-300">Use Export regularly to avoid data loss.</p>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-800/50 p-4">
+            <div className="font-semibold text-white">8) Support / Feedback</div>
+            <p className="mt-1 text-neutral-300">
+              If something breaks, include: device + browser + steps to reproduce + expected vs actual behaviour.
+            </p>
+          </div>
+          </div>
         </div>
 
-        <div className="p-4 border-t border-neutral-100 flex items-center justify-end">
-          <button type="button" className={btnPrimary} onClick={onClose}>
+        <div className={modalFooter}>
+          <button type="button" className={modalBtnPrimary} onClick={onClose}>
             Got it
           </button>
         </div>
@@ -321,69 +447,72 @@ function EditVendorModal({ vendor, onClose, onSave }) {
   const handleChange = (field, value) => setData((prev) => ({ ...prev, [field]: value }));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-2xl bg-white border border-neutral-200 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
-          <div className="font-semibold text-neutral-800">Edit Library Vendor</div>
-          <button type="button" className={btnSecondary} onClick={onClose}>
-            Close
+    <div className={modalOverlay}>
+      <div className={modalBackdrop} onClick={onClose} />
+      <div className={`${modalContainer} max-w-lg max-h-[90vh]`}>
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ backgroundColor: ACCENT }} />
+        <div className={modalHeader}>
+          <div className={modalTitle}>Edit Library Vendor</div>
+          <button type="button" className={modalCloseBtn} onClick={onClose}>
+            <CloseIcon />
           </button>
         </div>
-        <div className="p-4 overflow-y-auto space-y-3">
+        <div className={modalContent}>
+          <div className="space-y-3">
           <div className="text-xs text-neutral-500 text-right">* Required</div>
           <div>
-            <label className="text-sm text-neutral-700 font-medium">Name *</label>
-            <input className={inputBase} value={data.name || ""} onChange={(e) => handleChange("name", e.target.value)} />
+            <label className={modalLabel}>Name *</label>
+            <input className={modalInput} value={data.name || ""} onChange={(e) => handleChange("name", e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-neutral-700 font-medium">Email *</label>
-              <input className={inputBase} value={data.email || ""} onChange={(e) => handleChange("email", e.target.value)} />
+              <label className={modalLabel}>Email *</label>
+              <input className={modalInput} value={data.email || ""} onChange={(e) => handleChange("email", e.target.value)} />
             </div>
             <div>
-              <label className="text-sm text-neutral-700 font-medium">Phone *</label>
-              <input className={inputBase} value={data.phone || ""} onChange={(e) => handleChange("phone", e.target.value)} />
+              <label className={modalLabel}>Phone *</label>
+              <input className={modalInput} value={data.phone || ""} onChange={(e) => handleChange("phone", e.target.value)} />
             </div>
           </div>
           <div>
-            <label className="text-sm text-neutral-700 font-medium">Website</label>
-            <input className={inputBase} value={data.website || ""} onChange={(e) => handleChange("website", e.target.value)} />
+            <label className={modalLabel}>Website</label>
+            <input className={modalInput} value={data.website || ""} onChange={(e) => handleChange("website", e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-neutral-700 font-medium">City</label>
-              <input className={inputBase} value={data.city || ""} onChange={(e) => handleChange("city", e.target.value)} />
+              <label className={modalLabel}>City</label>
+              <input className={modalInput} value={data.city || ""} onChange={(e) => handleChange("city", e.target.value)} />
             </div>
             <div>
-              <label className="text-sm text-neutral-700 font-medium">Category</label>
-              <input className={inputBase} value={data.category || ""} onChange={(e) => handleChange("category", e.target.value)} />
+              <label className={modalLabel}>Category</label>
+              <input className={modalInput} value={data.category || ""} onChange={(e) => handleChange("category", e.target.value)} />
             </div>
           </div>
           <div>
-            <label className="text-sm text-neutral-700 font-medium">Tags (comma-separated)</label>
+            <label className={modalLabel}>Tags (comma-separated)</label>
             <input
-              className={inputBase}
+              className={modalInput}
               value={Array.isArray(data.tags) ? data.tags.join(", ") : data.tags || ""}
               onChange={(e) => handleChange("tags", e.target.value)}
             />
           </div>
           <div>
-            <label className="text-sm text-neutral-700 font-medium">Notes</label>
+            <label className={modalLabel}>Notes</label>
             <textarea
-              className={`${inputBase} min-h-[80px]`}
+              className={`${modalInput} min-h-[80px]`}
               value={data.notes || ""}
               onChange={(e) => handleChange("notes", e.target.value)}
             />
           </div>
         </div>
-        <div className="p-4 border-t border-neutral-100 flex justify-end gap-2">
-          <button type="button" className={btnSecondary} onClick={onClose}>
+        </div>
+        <div className={modalFooter}>
+          <button type="button" className={modalBtnSecondary} onClick={onClose}>
             Cancel
           </button>
           <button
             type="button"
-            className={btnPrimary}
+            className={modalBtnPrimary}
             onClick={() => {
               if (!data.name) {
                 alert("Name is required");
@@ -483,21 +612,22 @@ function ManageVendorsModal({ open, onClose, vendors, quotes, onUpdate, onDelete
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-4xl rounded-2xl bg-white border border-neutral-200 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
-          <div className="font-semibold text-neutral-800">Manage Vendors</div>
-          <button type="button" className={btnSecondary} onClick={onClose}>
-            Close
+    <div className={modalOverlay}>
+      <div className={modalBackdrop} onClick={onClose} />
+      <div className={`${modalContainer} max-w-4xl max-h-[90vh]`}>
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ backgroundColor: ACCENT }} />
+        <div className={modalHeader}>
+          <div className={modalTitle}>Manage Vendors</div>
+          <button type="button" className={modalCloseBtn} onClick={onClose}>
+            <CloseIcon />
           </button>
         </div>
         <div className="flex-1 flex overflow-hidden">
           {/* Left: List */}
-          <div className="w-1/3 border-r border-neutral-100 flex flex-col bg-neutral-50">
-            <div className="p-3 border-b border-neutral-100">
+          <div className="w-1/3 border-r border-neutral-700 flex flex-col bg-neutral-950/30">
+            <div className="p-3 border-b border-neutral-700">
               <input
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--ts-accent)] placeholder-neutral-500"
                 placeholder="Search vendors..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -506,93 +636,93 @@ function ManageVendorsModal({ open, onClose, vendors, quotes, onUpdate, onDelete
             <div className="flex-1 overflow-y-auto p-2 space-y-4">
               {sortedCats.map((cat) => (
                 <div key={cat}>
-                  <div className="px-2 py-1 text-xs font-bold text-neutral-400 uppercase tracking-wider">{cat}</div>
+                  <div className="px-2 py-1 text-xs font-bold text-neutral-500 uppercase tracking-wider">{cat}</div>
                   <div className="space-y-1">
                     {grouped[cat].map((v) => (
                       <button
                         key={v.id}
                         onClick={() => setSelectedId(v.id)}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between ${
-                          selectedId === v.id ? "bg-white shadow-sm ring-1 ring-neutral-200 font-medium" : "hover:bg-neutral-100 text-neutral-600"
+                          selectedId === v.id ? "bg-neutral-800 text-white shadow-sm ring-1 ring-neutral-600 font-medium" : "hover:bg-neutral-800/50 text-neutral-400"
                         }`}
                       >
                         <span className="truncate">{v.name || "Unnamed"}</span>
-                        {v.inactive && <span className="text-[10px] bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded-full">Inactive</span>}
+                        {v.inactive && <span className="text-[10px] bg-neutral-700 text-neutral-400 px-1.5 py-0.5 rounded-full">Inactive</span>}
                       </button>
                     ))}
                   </div>
                 </div>
               ))}
-              {filtered.length === 0 && <div className="p-4 text-center text-xs text-neutral-500">No vendors found.</div>}
+              {filtered.length === 0 && <div className="p-4 text-center text-xs text-neutral-600">No vendors found.</div>}
             </div>
           </div>
 
           {/* Right: Form */}
-          <div className="w-2/3 flex flex-col bg-white">
+          <div className="w-2/3 flex flex-col bg-neutral-900">
             {selectedId && data.id ? (
               <>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-lg font-bold text-neutral-800">{data.name}</div>
+                    <div className="text-lg font-bold text-white">{data.name}</div>
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input type="checkbox" checked={!!data.inactive} onChange={(e) => handleChange("inactive", e.target.checked)} />
-                      <span className="text-neutral-600">Inactive</span>
+                      <span className="text-neutral-400">Inactive</span>
                     </label>
                   </div>
-                  <div className="text-xs text-neutral-500 text-right">* Required</div>
+                  <div className="text-xs text-neutral-600 text-right">* Required</div>
 
                   <div>
-                    <label className="text-sm text-neutral-700 font-medium">Name *</label>
-                    <input className={inputBase} value={data.name || ""} onChange={(e) => handleChange("name", e.target.value)} />
+                    <label className={modalLabel}>Name *</label>
+                    <input className={modalInput} value={data.name || ""} onChange={(e) => handleChange("name", e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-neutral-700 font-medium">Email *</label>
-                      <input className={inputBase} value={data.email || ""} onChange={(e) => handleChange("email", e.target.value)} />
+                      <label className={modalLabel}>Email *</label>
+                      <input className={modalInput} value={data.email || ""} onChange={(e) => handleChange("email", e.target.value)} />
                     </div>
                     <div>
-                      <label className="text-sm text-neutral-700 font-medium">Phone *</label>
-                      <input className={inputBase} value={data.phone || ""} onChange={(e) => handleChange("phone", e.target.value)} />
+                      <label className={modalLabel}>Phone *</label>
+                      <input className={modalInput} value={data.phone || ""} onChange={(e) => handleChange("phone", e.target.value)} />
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-neutral-700 font-medium">Website</label>
-                    <input className={inputBase} value={data.website || ""} onChange={(e) => handleChange("website", e.target.value)} />
+                    <label className={modalLabel}>Website</label>
+                    <input className={modalInput} value={data.website || ""} onChange={(e) => handleChange("website", e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-neutral-700 font-medium">City</label>
-                      <input className={inputBase} value={data.city || ""} onChange={(e) => handleChange("city", e.target.value)} />
+                      <label className={modalLabel}>City</label>
+                      <input className={modalInput} value={data.city || ""} onChange={(e) => handleChange("city", e.target.value)} />
                     </div>
                     <div>
-                      <label className="text-sm text-neutral-700 font-medium">Category</label>
-                      <input className={inputBase} value={data.category || ""} onChange={(e) => handleChange("category", e.target.value)} />
+                      <label className={modalLabel}>Category</label>
+                      <input className={modalInput} value={data.category || ""} onChange={(e) => handleChange("category", e.target.value)} />
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-neutral-700 font-medium">Tags</label>
-                    <input className={inputBase} value={data.tags || ""} onChange={(e) => handleChange("tags", e.target.value)} />
+                    <label className={modalLabel}>Tags</label>
+                    <input className={modalInput} value={data.tags || ""} onChange={(e) => handleChange("tags", e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-sm text-neutral-700 font-medium">Notes</label>
+                    <label className={modalLabel}>Notes</label>
                     <textarea
-                      className={`${inputBase} min-h-[80px]`}
+                      className={`${modalInput} min-h-[80px]`}
                       value={data.notes || ""}
                       onChange={(e) => handleChange("notes", e.target.value)}
                     />
                   </div>
                 </div>
-                <div className="p-4 border-t border-neutral-100 flex justify-between bg-neutral-50">
-                  <button type="button" className={btnDanger} onClick={handleDelete}>
+                <div className="p-4 border-t border-neutral-700 flex justify-between bg-neutral-900">
+                  <button type="button" className={modalBtnDanger} onClick={handleDelete}>
                     Delete Vendor
                   </button>
-                  <button type="button" className={btnPrimary} onClick={handleSave}>
+                  <button type="button" className={modalBtnPrimary} onClick={handleSave}>
                     Save Changes
                   </button>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-neutral-400 text-sm">Select a vendor to edit</div>
+              <div className="flex-1 flex items-center justify-center text-neutral-500 text-sm">Select a vendor to edit</div>
             )}
           </div>
         </div>
@@ -645,47 +775,50 @@ function ManageTemplatesModal({ open, onClose, templates, onSave, onDelete, onIm
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-4xl rounded-2xl bg-white border border-neutral-200 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
-          <div className="font-semibold text-neutral-800">Manage Email Templates</div>
-          <button type="button" className={btnSecondary} onClick={onClose}>Close</button>
+    <div className={modalOverlay}>
+      <div className={modalBackdrop} onClick={onClose} />
+      <div className={`${modalContainer} max-w-4xl max-h-[90vh]`}>
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ backgroundColor: ACCENT }} />
+        <div className={modalHeader}>
+          <div className={modalTitle}>Manage Email Templates</div>
+          <button type="button" className={modalCloseBtn} onClick={onClose}>
+            <CloseIcon />
+          </button>
         </div>
         <div className="flex-1 flex overflow-hidden">
-          <div className="w-1/3 border-r border-neutral-100 flex flex-col bg-neutral-50">
-            <div className="p-3 border-b border-neutral-100 flex gap-2">
-              <button className="w-full py-2 px-3 bg-white border border-neutral-200 rounded-lg text-sm font-medium hover:border-[var(--ts-accent)] shadow-sm" onClick={() => setSelectedId("new")}>+ New Template</button>
+          <div className="w-1/3 border-r border-neutral-700 flex flex-col bg-neutral-950/30">
+            <div className="p-3 border-b border-neutral-700 flex gap-2">
+              <button className="w-full py-2 px-3 bg-neutral-800 border border-neutral-600 text-neutral-200 rounded-lg text-sm font-medium hover:border-[var(--ts-accent)] shadow-sm transition" onClick={() => setSelectedId("new")}>+ New Template</button>
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {templates.map((t) => (
-                <button key={t.id} onClick={() => setSelectedId(t.id)} className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate ${selectedId === t.id ? "bg-white shadow-sm ring-1 ring-neutral-200 font-medium" : "hover:bg-neutral-100 text-neutral-600"}`}>{t.name}</button>
+                <button key={t.id} onClick={() => setSelectedId(t.id)} className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate ${selectedId === t.id ? "bg-neutral-800 text-white shadow-sm ring-1 ring-neutral-600 font-medium" : "hover:bg-neutral-800/50 text-neutral-400"}`}>{t.name}</button>
               ))}
-              {templates.length === 0 && <div className="p-4 text-center text-xs text-neutral-500">No templates.</div>}
+              {templates.length === 0 && <div className="p-4 text-center text-xs text-neutral-600">No templates.</div>}
             </div>
-            <div className="p-3 border-t border-neutral-100">
-              <ActionFileButton onFile={onImport} title="Upload JSON templates" className="w-full">Upload Templates (JSON)</ActionFileButton>
+            <div className="p-3 border-t border-neutral-700">
+              <ActionFileButton onFile={onImport} title="Upload JSON templates" className="w-full bg-neutral-800 border-neutral-600 text-neutral-300 hover:bg-neutral-700 hover:border-neutral-500">Upload Templates (JSON)</ActionFileButton>
             </div>
           </div>
-          <div className="w-2/3 flex flex-col bg-white">
+          <div className="w-2/3 flex flex-col bg-neutral-900">
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div>
-                <label className="text-sm text-neutral-700 font-medium">Template Name</label>
-                <input className={inputBase} value={data.name} onChange={(e) => handleChange("name", e.target.value)} placeholder="e.g. Standard RFQ" />
+                <label className={modalLabel}>Template Name</label>
+                <input className={modalInput} value={data.name} onChange={(e) => handleChange("name", e.target.value)} placeholder="e.g. Standard RFQ" />
               </div>
               <div>
-                <label className="text-sm text-neutral-700 font-medium">Subject</label>
-                <input className={inputBase} value={data.subject} onChange={(e) => handleChange("subject", e.target.value)} placeholder="Subject line..." />
+                <label className={modalLabel}>Subject</label>
+                <input className={modalInput} value={data.subject} onChange={(e) => handleChange("subject", e.target.value)} placeholder="Subject line..." />
               </div>
               <div>
-                <label className="text-sm text-neutral-700 font-medium">Body</label>
-                <textarea className={`${inputBase} min-h-[200px] font-mono`} value={data.body} onChange={(e) => handleChange("body", e.target.value)} placeholder="Email body..." />
+                <label className={modalLabel}>Body</label>
+                <textarea className={`${modalInput} min-h-[200px] font-mono`} value={data.body} onChange={(e) => handleChange("body", e.target.value)} placeholder="Email body..." />
                 <div className="mt-2 text-xs text-neutral-500">Available placeholders: {"{{vendor_name}}, {{vendor_email}}, {{title}}, {{spec}}, {{delivery_to}}, {{needed_by}}, {{my_name}}, {{my_org}}, {{reference}}"}</div>
               </div>
             </div>
-            <div className="p-4 border-t border-neutral-100 flex justify-between bg-neutral-50">
-              {selectedId !== "new" ? <button type="button" className={btnDanger} onClick={handleDelete}>Delete</button> : <div />}
-              <button type="button" className={btnPrimary} onClick={handleSave}>Save Template</button>
+            <div className="p-4 border-t border-neutral-700 flex justify-between bg-neutral-900">
+              {selectedId !== "new" ? <button type="button" className={modalBtnDanger} onClick={handleDelete}>Delete</button> : <div />}
+              <button type="button" className={modalBtnPrimary} onClick={handleSave}>Save Template</button>
             </div>
           </div>
         </div>
@@ -1465,26 +1598,25 @@ export default function App() {
 
       {/* Preview Modal */}
       {previewOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setPreviewOpen(false)} />
-          <div className="relative w-full max-w-5xl">
-            <div className="mb-3 rounded-2xl bg-white border border-neutral-200 shadow-sm p-3 flex items-center justify-between gap-3">
+        <div className={modalOverlay}>
+          <div className={modalBackdrop} onClick={() => setPreviewOpen(false)} />
+          <div className={`${modalContainer} max-w-5xl max-h-[90vh]`}>
+            <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ backgroundColor: ACCENT }} />
+            <div className={modalHeader}>
               <div>
-                <div className="text-lg font-semibold text-neutral-800">Print preview</div>
-                <div className="mt-2 h-[2px] w-48 rounded-full bg-[var(--ts-accent)]" />
+                <div className={modalTitle}>
+                  Print Preview <ModalTag label="PREVIEW" />
+                </div>
+                <div className={modalSubtitle}>Review your quote pack before printing.</div>
               </div>
-              <div className="flex items-center gap-2">
-                <button className={btnSecondary} onClick={modulePrint}>
-                  Print / Save PDF
-                </button>
-                <button className={btnPrimary} onClick={() => setPreviewOpen(false)}>
-                  Close
-                </button>
-              </div>
+              <button type="button" className={modalCloseBtn} onClick={() => setPreviewOpen(false)}>
+                <CloseIcon />
+              </button>
             </div>
 
-            <div className="rounded-2xl bg-white border border-neutral-200 shadow-xl overflow-auto max-h-[80vh]">
-              <div id="quoteit-print" className="p-6">
+            <div className="flex-1 overflow-auto bg-neutral-900 p-4 sm:p-8 flex justify-center custom-scrollbar">
+              {/* Paper sheet */}
+              <div id="quoteit-print" className="bg-white text-neutral-900 shadow-lg max-w-[210mm] w-full min-h-[297mm] p-8 rounded-sm">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-2xl font-bold tracking-tight text-neutral-800">
@@ -1622,6 +1754,15 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            <div className={modalFooter}>
+              <button className={modalBtnSecondary} onClick={modulePrint}>
+                Print / Save PDF
+              </button>
+              <button className={modalBtnPrimary} onClick={() => setPreviewOpen(false)}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
@@ -1630,12 +1771,11 @@ export default function App() {
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="text-4xl sm:text-5xl font-black tracking-tight text-neutral-800">
-              <span>Quote</span>
-              <span style={{ color: ACCENT }}>It</span>
-            </div>
-            <div className="text-sm text-neutral-700">Make procurement easy with the 3 quote system</div>
-            <div className="mt-3 h-[2px] w-80 rounded-full bg-[var(--ts-accent)]" />
+            <img
+              src={quoteItHeading}
+              alt="QuoteIt"
+              className="h-20 sm:h-28 lg:h-32 w-auto object-contain"
+            />
 
             <div className="mt-3 flex items-center justify-between gap-2">
               <div className="flex gap-2 overflow-x-auto whitespace-nowrap steps-scrollbar">
@@ -1704,6 +1844,46 @@ export default function App() {
           </div>
         </div>
 
+        {/* Status Bubbles (Horizontal Grid) */}
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          {/* Requirement Bubble */}
+          <div className="rounded-2xl p-3 text-center shadow-sm border-2 bg-white" style={{ borderColor: ACCENT }}>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Requirement</div>
+            <div className="text-xs font-bold text-neutral-800 mt-0.5">{ruleDescription}</div>
+          </div>
+
+          {/* Metric Bubbles */}
+          <div className="rounded-2xl bg-white border border-neutral-200 p-3 flex items-center justify-between shadow-sm">
+            <span className="text-xs font-bold text-neutral-500 uppercase">Vendors</span>
+            <div className="flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${vendorCount >= requiredQuotes ? "bg-green-500" : "bg-neutral-200"}`} />
+              <span className="text-sm font-bold text-neutral-800">{vendorCount}/{requiredQuotes}</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white border border-neutral-200 p-3 flex items-center justify-between shadow-sm">
+            <span className="text-xs font-bold text-neutral-500 uppercase">RFQs Sent</span>
+            <div className="flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${sentCount >= requiredQuotes ? "bg-green-500" : "bg-neutral-200"}`} />
+              <span className="text-sm font-bold text-neutral-800">{sentCount}/{requiredQuotes}</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white border border-neutral-200 p-3 flex items-center justify-between shadow-sm">
+            <span className="text-xs font-bold text-neutral-500 uppercase">Quotes</span>
+            <div className="flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${quotesWithAmounts >= requiredQuotes ? "bg-green-500" : "bg-neutral-200"}`} />
+              <span className="text-sm font-bold text-neutral-800">{quotesWithAmounts}/{requiredQuotes}</span>
+            </div>
+          </div>
+
+          {/* Pack Status Bubble */}
+          <div className={`rounded-2xl p-3 flex items-center justify-between shadow-sm border-2 transition-colors ${stepDone.packOk ? "bg-[rgb(var(--ts-accent-rgb)/0.15)] border-[var(--ts-accent)]" : "bg-neutral-50 border-neutral-100"}`}>
+            <span className="text-xs font-bold text-neutral-500 uppercase">Pack Status</span>
+            <span className="text-sm font-bold text-neutral-800">{stepDone.packOk ? "Ready" : "In Progress"}</span>
+          </div>
+        </div>
+
         {/* Main layout */}
         <div className="mt-5 grid grid-cols-1 lg:grid-cols-4 gap-3">
           <div className="space-y-3">
@@ -1728,36 +1908,6 @@ export default function App() {
                 </div>
                 <div className="text-xs text-neutral-600">
                   Vendor library: <span className="font-mono">{VENDOR_LIBRARY_KEY}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className={card}>
-              <div className={cardHead}>
-                <div className="font-semibold text-neutral-800">Status</div>
-              </div>
-              <div className={cardPad}>
-                <div className="flex flex-col gap-2">
-                  <div className="p-2 rounded-xl border border-[rgb(var(--ts-accent-rgb)/0.5)] bg-[rgb(var(--ts-accent-rgb)/0.1)] shadow-sm text-xs text-neutral-800">
-                    <span className="font-semibold">Requirements:</span> {ruleDescription}
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-neutral-600">Vendors</span>
-                    <Pill tone="accent">{vendorCount} / {requiredQuotes}</Pill>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-neutral-600">RFQs Sent</span>
-                    <Pill>{sentCount} / {requiredQuotes}</Pill>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-neutral-600">Quotes</span>
-                    <Pill>{quotesWithAmounts} / {requiredQuotes}</Pill>
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-neutral-100 flex justify-between items-center">
-                    <span className="text-sm font-medium text-neutral-800">Pack Status</span>
-                    {stepDone.packOk ? <Pill tone="accent">Ready</Pill> : <Pill>In progress</Pill>}
-                  </div>
                 </div>
               </div>
             </div>
