@@ -385,13 +385,7 @@ function HelpModal({ open, onClose }) {
                 <strong>Preview</strong> – Opens the print-ready quotation pack.
               </li>
               <li>
-                <strong>Print / Save PDF</strong> – Prints only the preview sheet. Choose “Save as PDF” to create a file.
-              </li>
-              <li>
-                <strong>Export</strong> – Downloads a JSON backup file.
-              </li>
-              <li>
-                <strong>Import</strong> – Restores data from a JSON backup file.
+                <strong>Export</strong> – Opens the export menu to download PDF, create email drafts, or backup/restore JSON data.
               </li>
             </ul>
           </div>
@@ -827,6 +821,72 @@ function ManageTemplatesModal({ open, onClose, templates, onSave, onDelete, onIm
   );
 }
 
+function ExportPackModal({ open, onClose, onPrint, onExportJSON, onImportJSON }) {
+  if (!open) return null;
+
+  const subject = encodeURIComponent(`QuoteIt Export Pack – ${isoToday()}`);
+  const body = encodeURIComponent(
+    "Attached: PDF export from QuoteIt (please attach the downloaded PDF file).\n\n" +
+    "Exports are generated locally on your device. No data is uploaded automatically."
+  );
+  const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
+
+  return (
+    <div className={modalOverlay}>
+      <div className={modalBackdrop} onClick={onClose} />
+      <div className={`${modalContainer} max-w-sm`}>
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ backgroundColor: ACCENT }} />
+        <div className={modalHeader}>
+          <div>
+            <div className={modalTitle}>Export</div>
+            <div className={modalSubtitle}>Save, share, or back up your data.</div>
+          </div>
+          <button type="button" className={modalCloseBtn} onClick={onClose}>
+            <CloseIcon />
+          </button>
+        </div>
+
+        <div className={modalContent}>
+          <div className="space-y-6">
+            {/* PDF & Print Section */}
+            <div>
+              <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">PDF & Print</div>
+              <div className="grid grid-cols-1 gap-3">
+                <button onClick={onPrint} className={modalBtnSecondary + " w-full justify-center"}>
+                  Download PDF
+                </button>
+                <button onClick={onPrint} className={modalBtnSecondary + " w-full justify-center"}>
+                  Print / Save PDF
+                </button>
+                <a
+                  href={mailtoLink}
+                  className={modalBtnSecondary + " w-full justify-center flex items-center justify-center"}
+                >
+                  Create Email Draft
+                </a>
+              </div>
+            </div>
+
+            {/* JSON Backup Section */}
+            <div>
+              <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">JSON Backup</div>
+              <div className="grid grid-cols-1 gap-3">
+                <button onClick={onExportJSON} className={modalBtnSecondary + " w-full justify-center"}>
+                  Download JSON
+                </button>
+                <ActionFileButton onFile={onImportJSON} tone="default" className="w-full justify-center bg-neutral-800 border-neutral-600 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-500">Import JSON</ActionFileButton>
+                <div className="text-xs text-neutral-500 text-center">Import replaces current app data. Export first if unsure.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={modalFooter}><button type="button" className={modalBtnPrimary} onClick={onClose}>Done</button></div>
+      </div>
+    </div>
+  );
+}
+
 const VendorSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -857,6 +917,7 @@ export default function App() {
   const [state, setState] = useState(loadState());
 
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [exportPackOpen, setExportPackOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [manageVendorsOpen, setManageVendorsOpen] = useState(false);
   const [manageLibraryOpen, setManageLibraryOpen] = useState(false);
@@ -1595,6 +1656,16 @@ export default function App() {
         onDelete={(id) => setRfqTemplates((prev) => prev.filter((x) => x.id !== id))}
         onImport={importTemplates}
       />
+      <ExportPackModal
+        open={exportPackOpen}
+        onClose={() => setExportPackOpen(false)}
+        onPrint={() => {
+          setExportPackOpen(false);
+          setPreviewOpen(true);
+        }}
+        onExportJSON={exportJSON}
+        onImportJSON={(f) => { importJSON(f); setExportPackOpen(false); }}
+      />
 
       {/* Preview Modal */}
       {previewOpen ? (
@@ -1822,13 +1893,10 @@ export default function App() {
           {/* Normalized top actions + pinned Help icon */}
           <div className="w-full sm:w-[680px]">
             <div className="relative">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 pr-12">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 pr-12">
                 <ActionButton onClick={openHub} title="Return to ToolStack hub">Hub</ActionButton>
                 <ActionButton onClick={() => setPreviewOpen(true)}>Preview</ActionButton>
-                <ActionButton onClick={exportJSON}>Export</ActionButton>
-                <ActionFileButton onFile={(f) => importJSON(f)} tone="primary" title="Import JSON backup">
-                  Import
-                </ActionFileButton>
+                <ActionButton onClick={() => setExportPackOpen(true)}>Export</ActionButton>
               </div>
 
               <button
